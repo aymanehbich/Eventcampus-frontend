@@ -150,3 +150,23 @@
   background: #E94560;
   color: white;
 }
+
+.login-body .field-error {
+  color: #E94560;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.login-body .form-error {
+  background: rgba(233, 69, 96, 0.1);
+  color: #E94560;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.login-body .btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
