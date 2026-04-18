@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { logout as logoutApi } from '../../api/auth'
+import { logout as logoutApi, me as meApi } from '../../api/auth'
 import './Dashboard.css'
 
 function Dashboard() {
@@ -12,6 +12,10 @@ function Dashboard() {
     if (stored) {
       setUser(JSON.parse(stored))
     }
+
+    meApi().catch(() => {
+      // L'intercepteur axios gère le 401 (token expiré) automatiquement.
+    })
   }, [])
 
   const handleLogout = async () => {
