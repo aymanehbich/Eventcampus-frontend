@@ -52,7 +52,6 @@ function Register() {
           <p>Créez votre compte et participez pleinement à la vie universitaire.</p>
         </div>
         <div className="right">
-          <div className="label-tag">Module 1 — Authentification</div>
           <h3>Créer un compte</h3>
           <form onSubmit={handleSubmit}>
             <div className="form-row">
