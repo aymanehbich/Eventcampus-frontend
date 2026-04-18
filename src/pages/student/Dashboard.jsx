@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { logout as logoutApi } from '../../api/auth'
+import { useLogout } from '../../hooks/useLogout'
 import './Dashboard.css'
 
 function Dashboard() {
   const [user, setUser] = useState(null)
-  const navigate = useNavigate()
+  const logout = useLogout()
 
   useEffect(() => {
     const stored = localStorage.getItem('user')
@@ -14,17 +13,6 @@ function Dashboard() {
     }
   }, [])
 
-  const handleLogout = async () => {
-    try {
-      await logoutApi()
-    } catch (err) {
-      // Ignore error, still clear the session locally
-    }
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    navigate('/login')
-  }
-
   return (
     <div className="dashboard-body">
       <header className="dashboard-header">
@@ -32,7 +20,7 @@ function Dashboard() {
           <span className="brand-icon">🎓</span>
           <span className="brand-name">EventCampus</span>
         </div>
-        <button className="btn-logout" onClick={handleLogout}>Se déconnecter</button>
+        <button className="btn-logout" onClick={logout}>Se déconnecter</button>
       </header>
       <main className="dashboard-main">
         <div className="welcome-card">
