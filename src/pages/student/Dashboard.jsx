@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { me as meApi } from '../../api/auth'
 import { useLogout } from '../../hooks/useLogout'
 import './Dashboard.css'
 
@@ -11,6 +12,10 @@ function Dashboard() {
     if (stored) {
       setUser(JSON.parse(stored))
     }
+
+    meApi().catch(() => {
+      // L'intercepteur axios gère le 401 (token expiré) automatiquement.
+    })
   }, [])
 
   return (
