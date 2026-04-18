@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login as loginApi } from '../../api/auth'
 import './Login.css'
@@ -10,8 +10,16 @@ function Login() {
     password: '',
   })
   const [errors, setErrors] = useState({})
+  const [info, setInfo] = useState(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (sessionStorage.getItem('sessionExpired') === '1') {
+      setInfo('Votre session a expiré. Veuillez vous reconnecter.')
+      sessionStorage.removeItem('sessionExpired')
+    }
+  }, [])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -101,6 +109,7 @@ function Login() {
               />
               {errors.password && <div className="field-error">{errors.password[0]}</div>}
             </div>
+            {info && <div className="form-info">{info}</div>}
             {errors.general && <div className="form-error">{errors.general[0]}</div>}
             <button type="submit" className="btn-submit" disabled={loading}>
               {loading ? 'Connexion…' : 'Se connecter'}

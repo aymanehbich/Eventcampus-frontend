@@ -16,4 +16,25 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status
+    const url = error.config?.url || ''
+    const isAuthRoute = url.includes('/login') || url.includes('/register')
+
+    if (status === 401 && !isAuthRoute) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      sessionStorage.setItem('sessionExpired', '1')
+
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
+    }
+
+    return Promise.reject(error)
+  }
+)
+
 export default api
