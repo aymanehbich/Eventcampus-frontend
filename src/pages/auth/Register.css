@@ -1,0 +1,176 @@
+.register-body {
+  font-family: 'DM Sans', sans-serif;
+  background: #EAEAEF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px;
+}
+
+.card {
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 860px;
+}
+
+.left {
+  background: linear-gradient(160deg, #1A1A2E, #0F3460);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 40px;
+  color: white;
+  text-align: center;
+}
+
+.left .emoji {
+  font-size: 56px;
+  margin-bottom: 20px;
+}
+
+.left h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 30px;
+  margin-bottom: 12px;
+}
+
+.left p {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 260px;
+}
+
+.right {
+  padding: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.right h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 24px;
+  color: #1A1A2E;
+  margin-bottom: 22px;
+}
+
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7A7A8C;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  border: 1.5px solid #E0E0E6;
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  color: #1A1A2E;
+  outline: none;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #E94560;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.btn-submit {
+  width: 100%;
+  background: #E94560;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.footer-text {
+  text-align: center;
+  font-size: 13px;
+  color: #7A7A8C;
+  margin-top: 16px;
+}
+
+.footer-text a {
+  color: #E94560;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.label-tag {
+  display: inline-block;
+  background: rgba(233, 69, 96, 0.1);
+  color: #E94560;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.role-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.role-card {
+  border: 2px solid #E0E0E6;
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.role-card.selected {
+  border-color: #E94560;
+  background: rgba(233, 69, 96, 0.04);
+}
+
+.role-card .r-icon {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.role-card .r-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1A1A2E;
+}
+
+.role-card .r-sub {
+  font-size: 11px;
+  color: #7A7A8C;
+}
