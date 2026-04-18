@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { register } from '../../api/auth'
 import './Register.css'
 
 function Register() {
@@ -9,6 +10,9 @@ function Register() {
     password: '',
     role: 'etudiant'
   })
+  const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(null)
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -18,9 +22,25 @@ function Register() {
     setFormData({ ...formData, role })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log('Register:', formData)
+    setErrors({})
+    setSuccess(null)
+    setLoading(true)
+
+    try {
+      const response = await register(formData)
+      localStorage.setItem('token', response.data.token)
+      setSuccess('Compte créé avec succès !')
+    } catch (err) {
+      if (err.response?.status === 422) {
+        setErrors(err.response.data.errors || {})
+      } else {
+        setErrors({ general: ['Une erreur est survenue. Veuillez réessayer.'] })
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -44,6 +64,7 @@ function Register() {
                   value={formData.prenom}
                   onChange={handleChange}
                 />
+                {errors.prenom && <div className="field-error">{errors.prenom[0]}</div>}
               </div>
               <div className="form-group">
                 <label>Nom</label>
@@ -53,6 +74,7 @@ function Register() {
                   value={formData.nom}
                   onChange={handleChange}
                 />
+                {errors.nom && <div className="field-error">{errors.nom[0]}</div>}
               </div>
             </div>
             <div className="form-group">
@@ -64,6 +86,7 @@ function Register() {
                 value={formData.email}
                 onChange={handleChange}
               />
+              {errors.email && <div className="field-error">{errors.email[0]}</div>}
             </div>
             <div className="form-group">
               <label>Mot de passe</label>
@@ -74,6 +97,7 @@ function Register() {
                 value={formData.password}
                 onChange={handleChange}
               />
+              {errors.password && <div className="field-error">{errors.password[0]}</div>}
             </div>
             <div className="form-group">
               <label>Je suis…</label>
@@ -96,7 +120,11 @@ function Register() {
                 </div>
               </div>
             </div>
-            <button type="submit" className="btn-submit">Créer mon compte</button>
+            {errors.general && <div className="form-error">{errors.general[0]}</div>}
+            {success && <div className="form-success">{success}</div>}
+            <button type="submit" className="btn-submit" disabled={loading}>
+              {loading ? 'Création…' : 'Créer mon compte'}
+            </button>
           </form>
           <p className="footer-text">Déjà un compte ? <a href="#">Se connecter</a></p>
         </div>
