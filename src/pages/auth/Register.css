@@ -212,3 +212,32 @@
   font-size: 13px;
   margin-bottom: 14px;
 }
+
+.org-success {
+  text-align: center;
+  padding: 24px 0 8px;
+}
+
+.org-success-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+
+.org-success p {
+  font-size: 14px;
+  color: #1A1A2E;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.org-success-link {
+  display: inline-block;
+  color: #E94560;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.org-success-link:hover {
+  text-decoration: underline;
+}
