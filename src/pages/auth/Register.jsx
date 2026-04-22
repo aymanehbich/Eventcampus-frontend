@@ -14,12 +14,18 @@ function Register() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(null)
 
+  const [orgStep, setOrgStep] = useState('email')
+  const [orgEmail, setOrgEmail] = useState('')
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
   const handleRoleSelect = (role) => {
     setFormData({ ...formData, role })
+    setOrgStep('email')
+    setOrgEmail('')
+    setErrors({})
   }
 
   const handleSubmit = async (e) => {
@@ -54,50 +60,6 @@ function Register() {
         <div className="right">
           <h3>Créer un compte</h3>
           <form onSubmit={handleSubmit}>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Prénom</label>
-                <input
-                  name="prenom"
-                  placeholder="Aymane"
-                  value={formData.prenom}
-                  onChange={handleChange}
-                />
-                {errors.prenom && <div className="field-error">{errors.prenom[0]}</div>}
-              </div>
-              <div className="form-group">
-                <label>Nom</label>
-                <input
-                  name="nom"
-                  placeholder="Hbich"
-                  value={formData.nom}
-                  onChange={handleChange}
-                />
-                {errors.nom && <div className="field-error">{errors.nom[0]}</div>}
-              </div>
-            </div>
-            <div className="form-group">
-              <label>E-mail universitaire</label>
-              <input
-                name="email"
-                type="email"
-                placeholder="prenom.nom@univ.ma"
-                value={formData.email}
-                onChange={handleChange}
-              />
-              {errors.email && <div className="field-error">{errors.email[0]}</div>}
-            </div>
-            <div className="form-group">
-              <label>Mot de passe</label>
-              <input
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-              />
-              {errors.password && <div className="field-error">{errors.password[0]}</div>}
-            </div>
             <div className="form-group">
               <label>Je suis…</label>
               <div className="role-options">
@@ -119,11 +81,79 @@ function Register() {
                 </div>
               </div>
             </div>
-            {errors.general && <div className="form-error">{errors.general[0]}</div>}
-            {success && <div className="form-success">{success}</div>}
-            <button type="submit" className="btn-submit" disabled={loading}>
-              {loading ? 'Création…' : 'Créer mon compte'}
-            </button>
+
+            {formData.role === 'etudiant' && (
+              <>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Prénom</label>
+                    <input
+                      name="prenom"
+                      placeholder="Aymane"
+                      value={formData.prenom}
+                      onChange={handleChange}
+                    />
+                    {errors.prenom && <div className="field-error">{errors.prenom[0]}</div>}
+                  </div>
+                  <div className="form-group">
+                    <label>Nom</label>
+                    <input
+                      name="nom"
+                      placeholder="Hbich"
+                      value={formData.nom}
+                      onChange={handleChange}
+                    />
+                    {errors.nom && <div className="field-error">{errors.nom[0]}</div>}
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>E-mail universitaire</label>
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="prenom.nom@univ.ma"
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
+                  {errors.email && <div className="field-error">{errors.email[0]}</div>}
+                </div>
+                <div className="form-group">
+                  <label>Mot de passe</label>
+                  <input
+                    name="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleChange}
+                  />
+                  {errors.password && <div className="field-error">{errors.password[0]}</div>}
+                </div>
+                {errors.general && <div className="form-error">{errors.general[0]}</div>}
+                {success && <div className="form-success">{success}</div>}
+                <button type="submit" className="btn-submit" disabled={loading}>
+                  {loading ? 'Création…' : 'Créer mon compte'}
+                </button>
+              </>
+            )}
+
+            {formData.role === 'organisateur' && orgStep === 'email' && (
+              <>
+                <div className="form-group">
+                  <label>E-mail universitaire</label>
+                  <input
+                    type="email"
+                    placeholder="prenom.nom@univ.ma"
+                    value={orgEmail}
+                    onChange={(e) => setOrgEmail(e.target.value)}
+                  />
+                  {errors.email && <div className="field-error">{errors.email[0]}</div>}
+                </div>
+                {errors.general && <div className="form-error">{errors.general[0]}</div>}
+                <button type="button" className="btn-submit" disabled={loading}>
+                  {loading ? 'Vérification…' : 'Vérifier'}
+                </button>
+              </>
+            )}
           </form>
           <p className="footer-text">Déjà un compte ? <a href="#">Se connecter</a></p>
         </div>
