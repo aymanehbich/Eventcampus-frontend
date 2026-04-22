@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { register } from '../../api/auth'
-import { checkEmail } from '../../api/roleRequests'
+import { checkEmail, submitRoleRequest } from '../../api/roleRequests'
 import './Register.css'
 
 function Register() {
@@ -31,6 +31,26 @@ function Register() {
       setOrgStep(response.data.exists ? 'exists' : 'not_exists')
     } catch {
       setErrors({ general: ['Une erreur est survenue. Veuillez réessayer.'] })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmitRoleRequest = async () => {
+    setErrors({})
+    setLoading(true)
+    try {
+      const payload = orgStep === 'exists'
+        ? { name: orgEmail, email: orgEmail, student_id: orgData.student_id, is_existing_student: true }
+        : { name: `${orgData.prenom} ${orgData.nom}`, email: orgEmail, student_id: orgData.student_id, password: orgData.password, password_confirmation: orgData.password_confirmation, is_existing_student: false }
+      await submitRoleRequest(payload)
+      setOrgStep('success')
+    } catch (err) {
+      if (err.response?.status === 422) {
+        setErrors(err.response.data.errors || {})
+      } else {
+        setErrors({ general: ['Une erreur est survenue. Veuillez réessayer.'] })
+      }
     } finally {
       setLoading(false)
     }
@@ -191,7 +211,7 @@ function Register() {
                   {errors.student_id && <div className="field-error">{errors.student_id[0]}</div>}
                 </div>
                 {errors.general && <div className="form-error">{errors.general[0]}</div>}
-                <button type="button" className="btn-submit" disabled={loading}>
+                <button type="button" className="btn-submit" disabled={loading} onClick={handleSubmitRoleRequest}>
                   {loading ? 'Envoi…' : 'Soumettre ma demande'}
                 </button>
               </>
@@ -253,10 +273,18 @@ function Register() {
                   {errors.student_id && <div className="field-error">{errors.student_id[0]}</div>}
                 </div>
                 {errors.general && <div className="form-error">{errors.general[0]}</div>}
-                <button type="button" className="btn-submit" disabled={loading}>
+                <button type="button" className="btn-submit" disabled={loading} onClick={handleSubmitRoleRequest}>
                   {loading ? 'Envoi…' : 'Créer mon compte et soumettre ma demande'}
                 </button>
               </>
+            )}
+
+            {formData.role === 'organisateur' && orgStep === 'success' && (
+              <div className="org-success">
+                <div className="org-success-icon">✅</div>
+                <p>Votre demande a été soumise avec succès. L'admin va valider votre demande.</p>
+                <a href="/login" className="org-success-link">Se connecter</a>
+              </div>
             )}
           </form>
           <p className="footer-text">Déjà un compte ? <a href="#">Se connecter</a></p>
