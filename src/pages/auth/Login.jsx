@@ -38,7 +38,7 @@ function Login() {
       localStorage.setItem('user', JSON.stringify(user))
 
       if (user.role === 'etudiant') {
-        navigate('/student')
+        navigate('/student/clubs')
       } else if (user.role === 'organisateur') {
         navigate('/organiser')
       } else {
