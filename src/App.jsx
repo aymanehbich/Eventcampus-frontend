@@ -6,6 +6,7 @@ import StudentDashboard from './pages/student/Dashboard'
 import ProtectedRoute from './router/ProtectedRoute'
 import Clubs from './pages/student/Clubs'
 import ClubDetail from './pages/student/ClubDetail'
+import Events from './pages/student/Events'
 
 function App() {
   return (
@@ -28,6 +29,14 @@ function App() {
           }
         />
         <Route
+          path="/student/events"
+          element={
+            <ProtectedRoute role="etudiant">
+              <Events />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/student/clubs"
           element={
             <ProtectedRoute role="etudiant">
@@ -40,7 +49,7 @@ function App() {
           element={
             <ProtectedRoute role="etudiant">
               <ClubDetail />
-      
+
             </ProtectedRoute>
           }
         />
