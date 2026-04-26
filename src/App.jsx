@@ -7,6 +7,7 @@ import ProtectedRoute from './router/ProtectedRoute'
 import Clubs from './pages/student/Clubs'
 import ClubDetail from './pages/student/ClubDetail'
 import Events from './pages/student/Events'
+import EventDetail from './pages/student/EventDetail'
 
 function App() {
   return (
@@ -33,6 +34,14 @@ function App() {
           element={
             <ProtectedRoute role="etudiant">
               <Events />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/events/:id"
+          element={
+            <ProtectedRoute role="etudiant">
+              <EventDetail />
             </ProtectedRoute>
           }
         />
