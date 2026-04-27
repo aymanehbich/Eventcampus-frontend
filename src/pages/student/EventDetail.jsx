@@ -490,17 +490,20 @@ export default function EventDetail() {
                     disabled={registering}
                     style={{
                       width: '100%',
-                      background: 'transparent',
-                      color: '#2ECC71',
-                      border: '2px solid #2ECC71',
-                      borderRadius: '10px',
-                      padding: '12px',
+                      background: 'linear-gradient(135deg, #2ECC71, #27AE60)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      padding: '14px',
                       fontSize: '15px',
                       fontWeight: 700,
                       fontFamily: "'DM Sans', sans-serif",
                       cursor: registering ? 'wait' : 'pointer',
                       marginTop: '16px',
                       opacity: registering ? 0.7 : 1,
+                      boxShadow: '0 4px 14px rgba(46, 204, 113, 0.35)',
+                      letterSpacing: '0.3px',
+                      transition: 'opacity 0.2s',
                     }}
                   >
                     ✓ Inscrit à cet événement
@@ -511,10 +514,10 @@ export default function EventDetail() {
                     disabled={registering}
                     style={{
                       width: '100%',
-                      background: '#F39C12',
+                      background: 'linear-gradient(135deg, #F39C12, #D68910)',
                       color: 'white',
                       border: 'none',
-                      borderRadius: '10px',
+                      borderRadius: '12px',
                       padding: '14px',
                       fontSize: '15px',
                       fontWeight: 700,
@@ -522,6 +525,9 @@ export default function EventDetail() {
                       cursor: registering ? 'wait' : 'pointer',
                       marginTop: '16px',
                       opacity: registering ? 0.7 : 1,
+                      boxShadow: '0 4px 14px rgba(243, 156, 18, 0.35)',
+                      letterSpacing: '0.3px',
+                      transition: 'opacity 0.2s',
                     }}
                   >
                     ⏳ Rejoindre la liste d'attente
@@ -532,20 +538,23 @@ export default function EventDetail() {
                     disabled={registering}
                     style={{
                       width: '100%',
-                      background: '#E94560',
+                      background: 'linear-gradient(135deg, #E94560, #C0392B)',
                       color: 'white',
                       border: 'none',
-                      borderRadius: '10px',
-                      padding: '14px',
+                      borderRadius: '12px',
+                      padding: '15px',
                       fontSize: '15px',
                       fontWeight: 700,
                       fontFamily: "'DM Sans', sans-serif",
                       cursor: registering ? 'wait' : 'pointer',
                       marginTop: '16px',
                       opacity: registering ? 0.7 : 1,
+                      boxShadow: '0 4px 14px rgba(233, 69, 96, 0.4)',
+                      letterSpacing: '0.3px',
+                      transition: 'opacity 0.2s',
                     }}
                   >
-                    ✓ S'inscrire à cet événement
+                    S'inscrire à cet événement
                   </button>
                 )}
               </>
