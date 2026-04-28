@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
-import { getEvent, registerEvent, unregisterEvent } from '../../api/events'
+import { getEvent, registerEvent } from '../../api/events'
 
 const CATEGORY_COLORS = {
   Conférence: '#FFF0E6',
@@ -89,24 +89,6 @@ export default function EventDetail() {
     }
   }
 
-  const handleUnregister = async () => {
-    if (!event) return
-    setRegistering(true)
-    try {
-      await unregisterEvent(id)
-      setUserState(null)
-      setEvent(prev => ({
-        ...prev,
-        is_registered: false,
-        is_waitlisted: false,
-        places_disponibles: prev.places_disponibles + 1,
-      }))
-    } catch (err) {
-      alert('Une erreur est survenue lors de la désinscription.')
-    } finally {
-      setRegistering(false)
-    }
-  }
 
   const formatDate = (dateString) => {
     const date = new Date(dateString)
@@ -433,7 +415,7 @@ export default function EventDetail() {
                   </div>
                 </div>
                 <button
-                  onClick={handleUnregister}
+                  onClick=""
                   disabled={registering}
                   style={{
                     width: '100%',
@@ -486,7 +468,7 @@ export default function EventDetail() {
 
                 {userState === 'registered' ? (
                   <button
-                    onClick={handleUnregister}
+                    onClick=""
                     disabled={registering}
                     style={{
                       width: '100%',
