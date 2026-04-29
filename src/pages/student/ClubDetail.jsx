@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
-import { getClub, joinClub, leaveClub } from '../../api/clubs'
+import { getClub} from '../../api/clubs'
 
 const MEMBER_COLORS = ['#E94560', '#1A1A2E', '#4CAF50', '#FF9800', '#2196F3', '#9C27B0']
 
@@ -29,34 +29,7 @@ export default function ClubDetail() {
     }
   }
 
-  const handleJoinLeave = async () => {
-    if (!club) return
-    setJoining(true)
-    try {
-      if (club.is_member) {
-        await leaveClub(id)
-        setClub(prev => ({
-          ...prev,
-          is_member: false,
-          membres_count: (prev.membres_count ?? 1) - 1,
-          membres: prev.membres?.filter(
-            m => m.id !== JSON.parse(localStorage.getItem('user'))?.id
-          ),
-        }))
-      } else {
-        await joinClub(id)
-        setClub(prev => ({
-          ...prev,
-          is_member: true,
-          membres_count: (prev.membres_count ?? 0) + 1,
-        }))
-      }
-    } catch (err) {
-      alert('Une erreur est survenue.')
-    } finally {
-      setJoining(false)
-    }
-  }
+  
 
   if (loading) return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#EAEAEF', minHeight: '100vh' }}>
@@ -133,19 +106,20 @@ export default function ClubDetail() {
 
         {/* Bouton rejoindre */}
         <button
-          onClick={handleJoinLeave}
+          onClick=""
           disabled={joining}
           style={{
-            padding: '14px 28px', borderRadius: '10px', fontSize: '14px',
-            fontWeight: 600, cursor: joining ? 'wait' : 'pointer',
+            padding: '14px 32px', borderRadius: '12px', fontSize: '14px',
+            fontWeight: 700, cursor: joining ? 'wait' : 'pointer',
             fontFamily: "'DM Sans', sans-serif", flexShrink: 0,
-            background: club.is_member ? 'transparent' : '#E94560',
+            background: club.is_member ? 'transparent' : 'linear-gradient(135deg, #E94560, #C0392B)',
             color: club.is_member ? '#E94560' : 'white',
             border: club.is_member ? '2px solid #E94560' : '2px solid transparent',
-            transition: 'all 0.2s', opacity: joining ? 0.7 : 1,
+            boxShadow: club.is_member ? 'none' : '0 4px 14px rgba(233, 69, 96, 0.4)',
+            letterSpacing: '0.3px', transition: 'all 0.2s', opacity: joining ? 0.7 : 1,
           }}
         >
-          {joining ? '...' : club.is_member ? '✓ Membre' : '+ Rejoindre ce club'}
+          {joining ? '...' : club.is_member ? '✓ Membre' : 'Rejoindre ce club'}
         </button>
       </div>
 
