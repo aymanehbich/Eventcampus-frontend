@@ -4,6 +4,7 @@ import Login from './pages/auth/Login'
 import StudentDashboard from './pages/student/Dashboard'
 
 import ProtectedRoute from './router/ProtectedRoute'
+import Profile from './pages/student/Profile'
 import Clubs from './pages/student/Clubs'
 import ClubDetail from './pages/student/ClubDetail'
 import Events from './pages/student/Events'
@@ -21,6 +22,14 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
 
         {/* Routes protégées étudiant */}
+        <Route
+          path="/student/profile"
+          element={
+            <ProtectedRoute role="etudiant">
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/student/dashboard"
           element={

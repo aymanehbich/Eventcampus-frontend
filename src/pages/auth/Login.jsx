@@ -1,25 +1,34 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { login as loginApi } from '../../api/auth'
 import './Login.css'
 
+function getRedirect() {
+  const token = localStorage.getItem('token')
+  const user = JSON.parse(localStorage.getItem('user') || 'null')
+  if (!token || !user) return null
+  if (user.role === 'etudiant') return '/student/clubs'
+  if (user.role === 'organisateur') return '/organiser'
+  return '/'
+}
+
 function Login() {
+  const redirect = getRedirect()
   const [role, setRole] = useState('etudiant')
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  })
+  const [formData, setFormData] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState({})
-  const [info, setInfo] = useState(null)
+  const [info, setInfo] = useState(() => {
+    if (sessionStorage.getItem('sessionExpired') === '1') {
+      sessionStorage.removeItem('sessionExpired')
+      return 'Votre session a expiré. Veuillez vous reconnecter.'
+    }
+    return null
+  })
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (sessionStorage.getItem('sessionExpired') === '1') {
-      setInfo('Votre session a expiré. Veuillez vous reconnecter.')
-      sessionStorage.removeItem('sessionExpired')
-    }
-  }, [])
+  if (redirect) return <Navigate to={redirect} replace />
+
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })

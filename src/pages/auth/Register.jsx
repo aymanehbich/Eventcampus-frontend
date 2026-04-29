@@ -1,9 +1,20 @@
 import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { register } from '../../api/auth'
 import { checkEmail, submitRoleRequest } from '../../api/roleRequests'
 import './Register.css'
 
+function getRedirect() {
+  const token = localStorage.getItem('token')
+  const user = JSON.parse(localStorage.getItem('user') || 'null')
+  if (!token || !user) return null
+  if (user.role === 'etudiant') return '/student/clubs'
+  if (user.role === 'organisateur') return '/organiser'
+  return '/'
+}
+
 function Register() {
+  const redirect = getRedirect()
   const [formData, setFormData] = useState({
     prenom: '',
     nom: '',
@@ -88,6 +99,8 @@ function Register() {
       setLoading(false)
     }
   }
+
+  if (redirect) return <Navigate to={redirect} replace />
 
   return (
     <div className="register-body">
