@@ -300,7 +300,7 @@ function Register() {
               </div>
             )}
           </form>
-          <p className="footer-text">Déjà un compte ? <a href="#">Se connecter</a></p>
+          <p className="footer-text">Déjà un compte ? <a href="/login">Se connecter</a></p>
         </div>
       </div>
     </div>
