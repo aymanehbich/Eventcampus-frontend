@@ -136,16 +136,17 @@ export default function ClubDetail() {
           onClick={handleJoinLeave}
           disabled={joining}
           style={{
-            padding: '14px 28px', borderRadius: '10px', fontSize: '14px',
-            fontWeight: 600, cursor: joining ? 'wait' : 'pointer',
+            padding: '14px 32px', borderRadius: '12px', fontSize: '14px',
+            fontWeight: 700, cursor: joining ? 'wait' : 'pointer',
             fontFamily: "'DM Sans', sans-serif", flexShrink: 0,
-            background: club.is_member ? 'transparent' : '#E94560',
+            background: club.is_member ? 'transparent' : 'linear-gradient(135deg, #E94560, #C0392B)',
             color: club.is_member ? '#E94560' : 'white',
             border: club.is_member ? '2px solid #E94560' : '2px solid transparent',
-            transition: 'all 0.2s', opacity: joining ? 0.7 : 1,
+            boxShadow: club.is_member ? 'none' : '0 4px 14px rgba(233, 69, 96, 0.4)',
+            letterSpacing: '0.3px', transition: 'all 0.2s', opacity: joining ? 0.7 : 1,
           }}
         >
-          {joining ? '...' : club.is_member ? '✓ Membre' : '+ Rejoindre ce club'}
+          {joining ? '...' : club.is_member ? '✓ Membre' : 'Rejoindre ce club'}
         </button>
       </div>
 
