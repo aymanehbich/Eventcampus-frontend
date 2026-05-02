@@ -269,6 +269,7 @@ export default function Events() {
           </span>
         ))}
       </div>
+      
 
       {/* Content */}
       <div style={{ padding: '28px 36px' }}>

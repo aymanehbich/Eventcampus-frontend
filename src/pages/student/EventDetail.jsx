@@ -21,6 +21,7 @@ const CATEGORY_EMOJIS = {
   Hackathon: '👨‍💻',
   Environnement: '🌱',
   default: '📅',
+
 }
 
 const CATEGORY_TAGS = {
