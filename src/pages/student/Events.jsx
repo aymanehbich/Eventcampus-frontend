@@ -117,6 +117,13 @@ export default function Events() {
     return timeString.substring(0, 5)
   }
 
+  const handleResetFilters = () => {
+  setActiveCategory('Tous');
+  setActiveDate('Tous');
+  setActiveClub('Tous les clubs');
+  setSearchQuery('');
+};
+
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#EAEAEF', minHeight: '100vh' }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700;900&display=swap" rel="stylesheet" />
@@ -268,8 +275,35 @@ export default function Events() {
             {club}
           </span>
         ))}
+
+              {/* Bouton de réinitialisation */}
+      {(activeCategory !== 'Tous' || activeDate !== 'Tous' || activeClub !== 'Tous les clubs' || searchQuery !== '') && (
+        <button
+          onClick={handleResetFilters}
+          style={{
+            padding: '6px 12px',
+            borderRadius: '20px',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            border: '1.5px solid #E94560',
+            background: 'white',
+            color: '#E94560',
+            marginLeft: '10px',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#fde8ed';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'white';
+          }}
+        >
+          ✕ Réinitialiser
+        </button>
+      )}
       </div>
-      
+
 
       {/* Content */}
       <div style={{ padding: '28px 36px' }}>
@@ -304,6 +338,8 @@ export default function Events() {
               const bgColor = CATEGORY_COLORS[cat] || CATEGORY_COLORS.default
               const emoji = CATEGORY_EMOJIS[cat] || CATEGORY_EMOJIS.default
               const tagStyle = CATEGORY_TAGS[cat] || CATEGORY_TAGS.default
+
+          
 
               return (
                 <div
