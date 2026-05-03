@@ -69,7 +69,7 @@ export default function Events() {
       setLoading(false)
     }
   }
-
+  
   const filterEventsByDate = (event) => {
     if (activeDate === 'Tous') return true
 
