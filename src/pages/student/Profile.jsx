@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { updatePreferences } from '../../api/auth'
+import { getClubs } from '../../api/clubs'
 import Navbar from '../../components/Navbar'
 import './Profile.css'
 
@@ -143,23 +144,34 @@ function InscriptionsTab() {
 }
 
 function ClubsTab() {
+  const [clubs, setClubs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getClubs()
+      .then(res => setClubs(res.data.filter(c => c.is_member)))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
   return (
     <>
       <div className="section-header"><h3>Mes clubs</h3></div>
-      <div className="club-row">
-        <div className="club-em">💡</div>
-        <div>
-          <div className="club-name">Club Tech & Innovation</div>
-          <div className="club-meta">Membre depuis sept. 2024 · 142 membres</div>
-        </div>
-      </div>
-      <div className="club-row">
-        <div className="club-em">🌱</div>
-        <div>
-          <div className="club-name">Club Environnement</div>
-          <div className="club-meta">Membre depuis oct. 2024 · 63 membres</div>
-        </div>
-      </div>
+      {loading ? (
+        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>Chargement...</p>
+      ) : clubs.length === 0 ? (
+        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>Vous n'êtes membre d'aucun club.</p>
+      ) : (
+        clubs.map(club => (
+          <div className="club-row" key={club.id}>
+            <div className="club-em">{club.emoji || '🏛️'}</div>
+            <div>
+              <div className="club-name">{club.nom}</div>
+              <div className="club-meta">{club.membres_count ?? 0} membres</div>
+            </div>
+          </div>
+        ))
+      )}
     </>
   )
 }
