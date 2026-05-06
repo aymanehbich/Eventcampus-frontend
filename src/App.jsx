@@ -10,6 +10,7 @@ import ClubDetail from './pages/student/ClubDetail'
 import Events from './pages/student/Events'
 import EventDetail from './pages/student/EventDetail'
 import EventInscrits from './pages/organiser/EventInscrits'
+import MesEvenements from './pages/organiser/MesEvenements'
 
 function App() {
   return (
@@ -74,6 +75,14 @@ function App() {
         />
 
         {/* Routes organisateur */}
+        <Route
+          path="/organiser/events"
+          element={
+            <ProtectedRoute role="organisateur">
+              <MesEvenements />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/organiser/events/:id/inscrits"
           element={
