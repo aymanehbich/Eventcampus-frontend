@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import { createClub } from '../../api/clubs'
@@ -8,6 +8,7 @@ const CATEGORIES = ['Technologie', 'Culture', 'Sport', 'Environnement', 'Art']
 
 export default function CreateClub() {
   const navigate = useNavigate()
+  const fileInputRef = useRef(null)
 
   const [form, setForm] = useState({
     nom: '',
@@ -15,12 +16,21 @@ export default function CreateClub() {
     categorie: 'Technologie',
     description: '',
   })
+  const [logoFile, setLogoFile] = useState(null)
+  const [logoPreview, setLogoPreview] = useState(null)
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(null)
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file))
   }
 
   const handleSubmit = async (e) => {
@@ -33,6 +43,7 @@ export default function CreateClub() {
     data.append('description', form.description)
     data.append('categorie', form.categorie)
     data.append('emoji', form.emoji)
+    if (logoFile) data.append('logo', logoFile)
 
     try {
       await createClub(data)
@@ -61,7 +72,10 @@ export default function CreateClub() {
           {/* Live preview */}
           <div className="preview">
             <div className="preview-logo">
-              <span>{form.emoji || '🎓'}</span>
+              {logoPreview
+                ? <img src={logoPreview} alt="logo" />
+                : <span>{form.emoji || '🎓'}</span>
+              }
             </div>
             <div>
               <div className="preview-name">{form.nom || 'Nom du club'}</div>
@@ -93,6 +107,35 @@ export default function CreateClub() {
                 maxLength={10}
               />
               {errors.emoji && <div className="field-error">{errors.emoji[0]}</div>}
+            </div>
+
+            <div className="form-group">
+              <label>Logo image (optionnel)</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/jpg,image/webp"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
+              <div
+                className={`logo-upload-zone${logoFile ? ' has-file' : ''}`}
+                onClick={() => fileInputRef.current.click()}
+              >
+                {logoPreview
+                  ? <>
+                      <img src={logoPreview} alt="aperçu" className="logo-upload-preview" />
+                      <div className="logo-upload-name">{logoFile.name}</div>
+                      <div className="logo-upload-hint">Cliquer pour changer</div>
+                    </>
+                  : <>
+                      <div style={{ fontSize: '28px' }}>🖼️</div>
+                      <div className="logo-upload-label">Cliquer pour uploader un logo</div>
+                      <div className="logo-upload-hint">JPEG, PNG, WebP · max 2 MB</div>
+                    </>
+                }
+              </div>
+              {errors.logo && <div className="field-error">{errors.logo[0]}</div>}
             </div>
 
             <div className="form-group">
