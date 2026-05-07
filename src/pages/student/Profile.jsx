@@ -3,6 +3,9 @@ import { updatePreferences } from '../../api/auth'
 import { getClubs } from '../../api/clubs'
 import Navbar from '../../components/Navbar'
 import './Profile.css'
+import { useNavigate } from 'react-router-dom'
+import { getMyInscriptions } from '../../api/profil'
+import { unregisterEvent } from '../../api/events'
 
 const TABS = ['Mes inscriptions', 'Mes clubs', 'Messages', 'Préférences']
 
@@ -90,55 +93,179 @@ function Profile() {
 }
 
 function InscriptionsTab() {
+  const navigate = useNavigate()
+  const [upcoming, setUpcoming] = useState([])
+  const [past, setPast]         = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState(null)
+
+  const fetchInscriptions = () => {
+    setLoading(true)
+    getMyInscriptions()
+      .then(res => {
+        setUpcoming(res.data.upcoming ?? [])
+        setPast(res.data.past ?? [])
+      })
+      .catch(() => setError('Impossible de charger vos inscriptions.'))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { fetchInscriptions() }, [])
+
+  const formatDate = (d) =>
+    new Date(d).toLocaleDateString('fr-FR', {
+      day: 'numeric', month: 'short', year: 'numeric',
+    })
+
+  const handleCancel = async (eventId) => {
+    if (!window.confirm('Annuler votre inscription ?')) return
+    try {
+      await unregisterEvent(eventId)
+      fetchInscriptions()
+    } catch {
+      alert('Une erreur est survenue.')
+    }
+  }
+
+  if (loading) return (
+    <p style={{ fontSize: '13px', color: '#7A7A8C', padding: '20px 0' }}>
+      Chargement...
+    </p>
+  )
+
+  if (error) return (
+    <p style={{ fontSize: '13px', color: '#E94560', padding: '20px 0' }}>
+      {error}
+    </p>
+  )
+
   return (
     <>
+      {/* ── Événements à venir ── */}
       <div className="section-header"><h3>Événements à venir</h3></div>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Événement</th><th>Date</th><th>Lieu</th><th>Statut</th><th>Action</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Conférence Intelligence Artificielle</strong></td>
-              <td>4 avr. 2025</td><td>Amphi A</td>
-              <td><span className="badge badge-approved">Inscrit</span></td>
-              <td><button className="btn-danger">Annuler</button></td>
-            </tr>
-            <tr>
-              <td><strong>Atelier Design Thinking</strong></td>
-              <td>7 avr. 2025</td><td>Salle B12</td>
-              <td><span className="badge badge-approved">Inscrit</span></td>
-              <td><button className="btn-danger">Annuler</button></td>
-            </tr>
-            <tr>
-              <td><strong>Hackathon 48h</strong></td>
-              <td>19 avr. 2025</td><td>Salle Projet</td>
-              <td><span className="badge badge-waiting">Liste d'attente · Position 3</span></td>
-              <td><button className="btn-ghost">Voir</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div className="waiting-banner">
-        <div className="wb-icon">⏳</div>
-        <div className="wb-text">
-          <strong>Vous êtes N°3 sur la liste d'attente — Hackathon 48h</strong>
-          <span>Vous serez notifié par email dès qu'une place se libère. La place devra être confirmée dans les 24h.</span>
-        </div>
+
+      {upcoming.length === 0 ? (
+        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>
+          Aucune inscription à venir.
+        </p>
+      ) : (
+        <>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Événement</th>
+                  <th>Date</th>
+                  <th>Lieu</th>
+                  <th>Statut</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {upcoming.map(event => (
+                  <tr key={`${event.statut}-${event.id}`}>
+
+                    {/* Événement — bold comme l'UI */}
+                    <td><strong>{event.titre}</strong></td>
+
+                    {/* Date — format "4 avr. 2025" */}
+                    <td>{formatDate(event.date)}</td>
+
+                    {/* Lieu */}
+                    <td>{event.lieu || '—'}</td>
+
+                    {/* Statut — badge vert ou orange */}
+                    <td>
+                      {event.statut === 'waitlisted' ? (
+                        <span className="badge badge-waiting">
+                          Liste d'attente · Position {event.position}
+                        </span>
+                      ) : (
+                        <span className="badge badge-approved">Inscrit</span>
+                      )}
+                    </td>
+
+                    {/* Action — "Annuler" pour inscrits, "Voir" pour attente */}
+                    <td>
+                      {event.statut === 'registered' ? (
+                        <button
+                          className="btn-danger"
+                          onClick={() => handleCancel(event.id)}
+                        >
+                          Annuler
+                        </button>
+                      ) : (
+                        <button
+                          className="btn-ghost"
+                          onClick={() => navigate(`/student/events/${event.id}`)}
+                        >
+                          Voir
+                        </button>
+                      )}
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Banner liste d'attente — une par événement en attente */}
+          {upcoming
+            .filter(e => e.statut === 'waitlisted')
+            .map(e => (
+              <div className="waiting-banner" key={e.id}>
+                <div className="wb-icon">⏳</div>
+                <div className="wb-text">
+                  <strong>
+                    Vous êtes N°{e.position} sur la liste d'attente — {e.titre}
+                  </strong>
+                  <span>
+                    Vous serez notifié par email dès qu'une place se libère.
+                    La place devra être confirmée dans les 24h.
+                  </span>
+                </div>
+              </div>
+            ))
+          }
+        </>
+      )}
+
+      {/* ── Historique ── */}
+      <div className="section-header" style={{ marginTop: '32px' }}>
+        <h3>Historique (événements passés)</h3>
       </div>
 
-      <div className="section-header"><h3>Historique (événements passés)</h3></div>
-      <div className="table-wrap">
-        <table>
-          <thead><tr><th>Événement</th><th>Date</th><th>Club organisateur</th></tr></thead>
-          <tbody>
-            <tr><td>Hackathon 48h</td><td>15 mar. 2025</td><td>Club Tech & Innovation</td></tr>
-            <tr><td>Soirée intégration</td><td>10 jan. 2025</td><td>BDE</td></tr>
-            <tr><td>Atelier prise de parole</td><td>5 déc. 2024</td><td>Club Théâtre</td></tr>
-          </tbody>
-        </table>
-      </div>
+      {past.length === 0 ? (
+        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>
+          Aucun événement passé.
+        </p>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Événement</th>
+                <th>Date</th>
+                <th>Club organisateur</th>
+              </tr>
+            </thead>
+            <tbody>
+              {past.map(event => (
+                <tr
+                  key={event.id}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/student/events/${event.id}`)}
+                >
+                  <td>{event.titre}</td>
+                  <td>{formatDate(event.date)}</td>
+                  <td>{event.club_name || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   )
 }
