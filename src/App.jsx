@@ -5,6 +5,7 @@ import StudentDashboard from './pages/student/Dashboard'
 
 import ProtectedRoute from './router/ProtectedRoute'
 import Profile from './pages/student/Profile'
+import CreateClub from './pages/student/CreateClub'
 import Clubs from './pages/student/Clubs'
 import ClubDetail from './pages/student/ClubDetail'
 import Events from './pages/student/Events'
@@ -61,6 +62,14 @@ function App() {
           element={
             <ProtectedRoute role="etudiant">
               <Clubs />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/clubs/create"
+          element={
+            <ProtectedRoute>
+              <CreateClub />
             </ProtectedRoute>
           }
         />

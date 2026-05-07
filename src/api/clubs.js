@@ -4,3 +4,6 @@ export const getClubs = (params) => api.get('/clubs', { params })
 export const getClub = (id) => api.get(`/clubs/${id}`)
 export const joinClub = (clubId) => api.post('/adhesions', { club_id: clubId })
 export const leaveClub = (clubId) => api.post(`/clubs/${clubId}/leave`)
+export const createClub = (formData) => api.post('/clubs', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+})
