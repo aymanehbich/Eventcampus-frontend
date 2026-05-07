@@ -270,6 +270,8 @@ function InscriptionsTab() {
   )
 }
 
+
+
 function ClubsTab() {
   const [clubs, setClubs] = useState([])
   const [loading, setLoading] = useState(true)
