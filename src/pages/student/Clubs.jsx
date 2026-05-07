@@ -59,10 +59,20 @@ export default function Clubs() {
       <Navbar />
 
       {/* Header */}
-      <div style={{ padding: '28px 36px 0', background: '#F4F4F6' }}>
+      <div style={{ padding: '28px 36px 0', background: '#F4F4F6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#1A1A2E', marginBottom: '18px' }}>
           Tous les clubs du campus
         </h1>
+        <button
+          onClick={() => navigate('/clubs/create')}
+          style={{
+            background: '#E94560', color: 'white', border: 'none', borderRadius: '10px',
+            padding: '10px 20px', fontSize: '13px', fontWeight: 600,
+            fontFamily: "'DM Sans', sans-serif", cursor: 'pointer', marginBottom: '18px',
+          }}
+        >
+          + Créer un club
+        </button>
       </div>
 
       {/* Filtres */}
