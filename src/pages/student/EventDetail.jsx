@@ -287,6 +287,7 @@ export default function EventDetail() {
             </div>
             <button onClick={() => navigate(`/student/clubs/${event.club_id}`)} style={{ display: 'block', width: '100%', marginTop: '14px', background: '#EEF0FF', color: '#0F3460', border: 'none', borderRadius: '8px', padding: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
               Voir la page du club →
+              
             </button>
           </div>
         </div>
