@@ -430,12 +430,51 @@ export default function Events() {
                         alignItems: 'center',
                         gap: '8px',
                       }}>
-                        <span style={{
-                          fontSize: '11px',
-                          color: '#7A7A8C',
-                        }}>
-                          {event.places_disponibles ?? 'Ouvert à tous'} places
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+
+                          {/* Club cliquable — icône + nom discret (EP-170) */}
+                          {(event.club_name || event.club) && (
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                navigate(`/student/clubs/${event.club_id}`)
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {/* icône maison/club */}
+                              <svg
+                                width="12" height="12" viewBox="0 0 24 24"
+                                fill="none" stroke="#E94560" strokeWidth="2"
+                                strokeLinecap="round" strokeLinejoin="round"
+                                style={{ flexShrink: 0 }}
+                              >
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                <polyline points="9 22 9 12 15 12 15 22"/>
+                              </svg>
+                              <span style={{
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                color: '#1A1A2E',
+                              }}
+                                onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                                onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+                              >
+                                {event.club_name || event.club}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Places */}
+                          <span style={{ fontSize: '11px', color: '#7A7A8C' }}>
+                            {event.places_disponibles ?? 'Ouvert à tous'} places
+                          </span>
+
+                        </div>
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
