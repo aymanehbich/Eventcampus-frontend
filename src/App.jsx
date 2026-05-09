@@ -12,6 +12,7 @@ import Events from './pages/student/Events'
 import EventDetail from './pages/student/EventDetail'
 import EventInscrits from './pages/organiser/EventInscrits'
 import MesEvenements from './pages/organiser/MesEvenements'
+import Adhesions from './pages/organiser/Adhesions'
 
 function App() {
   return (
@@ -97,6 +98,15 @@ function App() {
           element={
             <ProtectedRoute role="organisateur">
               <EventInscrits />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/organiser/adhesions"
+          element={
+            <ProtectedRoute role="organisateur">
+              <Adhesions />
             </ProtectedRoute>
           }
         />
