@@ -6,8 +6,9 @@ import './Profile.css'
 import { useNavigate } from 'react-router-dom'
 import { getMyInscriptions } from '../../api/profil'
 import { unregisterEvent } from '../../api/events'
+import { getNotifications } from '../../api/notifications'
 
-const TABS = ['Mes inscriptions', 'Mes clubs', 'Messages', 'Préférences']
+const TABS = ['Mes inscriptions', 'Mes clubs', 'Messages', 'Notifications', 'Préférences']
 
 function Profile() {
   const [user, setUser] = useState(null)
@@ -16,6 +17,16 @@ function Profile() {
   const [message, setMessage] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0)
+
+  useEffect(() => {
+    getNotifications()
+      .then(res => {
+        const list = Array.isArray(res.data) ? res.data : (res.data?.data ?? [])
+        setUnreadNotifCount(list.filter(n => !n.read_at).length)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const stored = localStorage.getItem('user')
@@ -70,6 +81,9 @@ function Profile() {
           >
             {tab}
             {tab === 'Messages' && <span className="msg-badge">2</span>}
+            {tab === 'Notifications' && unreadNotifCount > 0 && (
+              <span className="msg-badge">{unreadNotifCount}</span>
+            )}
           </button>
         ))}
       </div>
@@ -78,6 +92,7 @@ function Profile() {
         {activeTab === 'Mes inscriptions' && <InscriptionsTab />}
         {activeTab === 'Mes clubs' && <ClubsTab />}
         {activeTab === 'Messages' && <MessagesTab />}
+        {activeTab === 'Notifications' && <NotificationsTab />}
         {activeTab === 'Préférences' && (
           <PreferencesTab
             emailReminders={emailReminders}
@@ -338,6 +353,52 @@ function MessagesTab() {
           <div className="msg-meta"><div className="msg-date">20 mar. 2025</div></div>
         </div>
       </div>
+    </>
+  )
+}
+
+function NotificationsTab() {
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getNotifications()
+      .then(res => setNotifications(Array.isArray(res.data) ? res.data : (res.data?.data ?? [])))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const formatDate = (d) =>
+    new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+
+  return (
+    <>
+      <div className="section-header"><h3>Mes notifications</h3></div>
+      {loading ? (
+        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>Chargement...</p>
+      ) : notifications.length === 0 ? (
+        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>Aucune notification.</p>
+      ) : (
+        <div className="table-wrap">
+          {notifications.map(n => (
+            <div key={n.id} className={`msg-row${!n.read_at ? ' msg-unread' : ''}`}>
+              <div className="msg-club-icon" style={{ background: n.type?.includes('Refusee') ? '#FFE6E6' : '#E6FAF0' }}>
+                {n.type?.includes('Refusee') ? '❌' : '✅'}
+              </div>
+              <div className="msg-body">
+                <div className="msg-subject">{n.data?.message}</div>
+                {n.data?.club_nom && (
+                  <div className="msg-club">{n.data.club_nom}</div>
+                )}
+              </div>
+              <div className="msg-meta">
+                <div className="msg-date">{n.created_at ? formatDate(n.created_at) : ''}</div>
+                {!n.read_at && <div className="unread-dot" />}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </>
   )
 }
