@@ -9,3 +9,4 @@ export const createClub = (formData) => api.post('/clubs', formData, {
 })
 export const getPendingAdhesions = () => api.get('/adhesions', { params: { statut: 'pending' } })
 export const accepterAdhesion = (id) => api.put(`/adhesions/${id}/accepter`)
+export const refuserAdhesion = (id) => api.put(`/adhesions/${id}/refuser`)

@@ -122,6 +122,12 @@
   color: white;
 }
 
+.adhesions-btn-danger {
+  background: transparent;
+  color: #E94560;
+  border: 1.5px solid #E94560;
+}
+
 .adhesions-muted {
   font-size: 13px;
   color: #7A7A8C;
