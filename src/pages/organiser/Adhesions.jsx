@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getPendingAdhesions, accepterAdhesion } from '../../api/clubs'
+import { getPendingAdhesions, accepterAdhesion, refuserAdhesion } from '../../api/clubs'
 import './Adhesions.css'
 
 export default function Adhesions() {
@@ -21,6 +21,18 @@ export default function Adhesions() {
     setProcessing(id)
     try {
       await accepterAdhesion(id)
+      setDemandes(prev => prev.filter(d => d.id !== id))
+    } catch {
+      alert('Une erreur est survenue.')
+    } finally {
+      setProcessing(null)
+    }
+  }
+
+  const handleRefuser = async (id) => {
+    setProcessing(id)
+    try {
+      await refuserAdhesion(id)
       setDemandes(prev => prev.filter(d => d.id !== id))
     } catch {
       alert('Une erreur est survenue.')
@@ -72,6 +84,13 @@ export default function Adhesions() {
                 onClick={() => handleAccepter(d.id)}
               >
                 {processing === d.id ? '...' : '✓ Accepter'}
+              </button>
+              <button
+                className="adhesions-btn adhesions-btn-danger"
+                disabled={processing === d.id}
+                onClick={() => handleRefuser(d.id)}
+              >
+                {processing === d.id ? '...' : '✕ Refuser'}
               </button>
             </div>
           </div>
