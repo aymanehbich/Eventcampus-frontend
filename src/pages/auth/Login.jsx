@@ -1,7 +1,9 @@
-import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { login as loginApi } from '../../api/auth'
 import './Login.css'
+
+const GOOGLE_AUTH_URL = 'http://127.0.0.1:8000/auth/google/redirect'
 
 function getRedirect() {
   const token = localStorage.getItem('token')
@@ -26,9 +28,15 @@ function Login() {
   })
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
+  useEffect(() => {
+    if (searchParams.get('error') === 'google_auth_failed') {
+      setErrors({ general: ['La connexion avec Google a échoué. Veuillez réessayer.'] })
+    }
+  }, [searchParams])
 
   if (redirect) return <Navigate to={redirect} replace />
-
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -124,6 +132,21 @@ function Login() {
               {loading ? 'Connexion…' : 'Se connecter'}
             </button>
           </form>
+
+          <div className="divider">
+            <span>ou</span>
+          </div>
+
+          <a href={GOOGLE_AUTH_URL} className="btn-google">
+            <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+              <path fill="#4285F4" d="M47.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.6h13.2c-.6 3-2.3 5.5-4.9 7.2v6h7.9c4.6-4.3 7.3-10.6 7.3-17.3z"/>
+              <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.9-6c-2.1 1.4-4.8 2.3-8 2.3-6.1 0-11.3-4.1-13.2-9.7H2.7v6.2C6.6 42.8 14.8 48 24 48z"/>
+              <path fill="#FBBC05" d="M10.8 28.8c-.5-1.4-.8-2.8-.8-4.3s.3-3 .8-4.3v-6.2H2.7C1 17.4 0 20.6 0 24s1 6.6 2.7 9.1l8.1-4.3z"/>
+              <path fill="#EA4335" d="M24 9.5c3.4 0 6.5 1.2 8.9 3.5l6.6-6.6C35.9 2.4 30.5 0 24 0 14.8 0 6.6 5.2 2.7 12.9l8.1 4.3C12.7 11.6 17.9 9.5 24 9.5z"/>
+            </svg>
+            Se connecter avec Google
+          </a>
+
           <p className="footer-text">Pas encore de compte ? <a href="/register">S'inscrire</a></p>
         </div>
       </div>

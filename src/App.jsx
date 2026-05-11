@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Register from './pages/auth/Register'
 import Login from './pages/auth/Login'
+import GoogleCallback from './pages/auth/GoogleCallback'
 import StudentDashboard from './pages/student/Dashboard'
 
 import ProtectedRoute from './router/ProtectedRoute'
@@ -21,6 +22,7 @@ function App() {
         {/* Auth */}
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/auth/google/callback" element={<GoogleCallback />} />
 
         {/* Redirect racine */}
         <Route path="/" element={<Navigate to="/login" replace />} />
