@@ -14,6 +14,7 @@ import EventDetail from './pages/student/EventDetail'
 import EventInscrits from './pages/organiser/EventInscrits'
 import MesEvenements from './pages/organiser/MesEvenements'
 import Adhesions from './pages/organiser/Adhesions'
+import Messaging from './pages/organiser/Messaging'
 
 function App() {
   return (
@@ -113,7 +114,14 @@ function App() {
           }
         />
 
-        {/* Fallback */}
+        <Route
+          path="/organiser/messages"
+          element={
+            <ProtectedRoute role="organisateur">
+              <Messaging />
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
