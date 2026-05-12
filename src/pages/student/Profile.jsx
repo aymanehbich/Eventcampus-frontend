@@ -321,38 +321,101 @@ function ClubsTab() {
 }
 
 function MessagesTab() {
+  const [receivedMessages, setReceivedMessages] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+  const fetchMessages = async () => {
+    try {
+      const { getReceivedMessages } = await import('../../api/messages')
+
+      const res = await getReceivedMessages()
+
+      // Backend returns { message, data }
+      const rawMessages = Array.isArray(res.data)
+        ? res.data
+        : (res.data?.data || [])
+
+      // Normalize frontend structure
+      const formattedMessages = rawMessages.map(msg => ({
+        id: msg.id,
+        content: msg.content,
+        created_at: msg.created_at,
+        read_at: msg.is_read ? msg.created_at : null,
+
+        sender_name:
+          msg.sender?.name ||
+          `${msg.sender?.prenom || ''} ${msg.sender?.nom || ''}`.trim(),
+
+        conversation_name:
+          msg.conversation?.name || 'Conversation'
+      }))
+
+      setReceivedMessages(formattedMessages)
+
+    } catch (err) {
+      console.error('Erreur lors du chargement des messages', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  fetchMessages()
+}, [])
+
+  const formatDate = (d) =>
+    new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+
+  const getCategoryColor = (category) => {
+    const colors = {
+      'Technologie': '#E6F0FF',
+      'Culture': '#FFE6F0',
+      'Environnement': '#E6FFE6',
+      'Art': '#F0E6FF',
+      'Sport': '#E6FFFA',
+    }
+    return colors[category] || '#F4F4F6'
+  }
+
+  const getCategoryEmoji = (category) => {
+    const emojis = {
+      'Technologie': '💡',
+      'Culture': '🎭',
+      'Environnement': '🌱',
+      'Art': '🎵',
+      'Sport': '⚽',
+    }
+    return emojis[category] || '🏛️'
+  }
+
   return (
     <>
       <div className="section-header"><h3>Mes messages reçus</h3></div>
-      <div className="table-wrap">
-        <div className="msg-row msg-unread">
-          <div className="msg-club-icon" style={{ background: '#E6F0FF' }}>💡</div>
-          <div className="msg-body">
-            <div className="msg-club">Club Tech & Innovation</div>
-            <div className="msg-subject">Rappel — Réunion préparatoire Hackathon</div>
-            <div className="msg-preview">Bonjour à tous, un rappel pour la réunion de préparation du Hackathon 48h…</div>
-          </div>
-          <div className="msg-meta"><div className="msg-date">2 avr. 2025</div><div className="unread-dot" /></div>
+      {loading ? (
+        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>Chargement des messages...</p>
+      ) : receivedMessages.length === 0 ? (
+        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>Aucun message reçu.</p>
+      ) : (
+        <div className="table-wrap">
+          {receivedMessages.map((msg, idx) => (
+            <div key={idx} className={`msg-row${!msg.read_at ? ' msg-unread' : ''}`}>
+              <div className="msg-club-icon" style={{ background: getCategoryColor(msg.club_category) }}>
+                {getCategoryEmoji(msg.club_category)}
+              </div>
+              <div className="msg-body">
+<div className="msg-club">
+  {msg.sender_name || 'Organisateur'}
+</div>                <div className="msg-subject">{msg.subject || msg.content?.substring(0, 50)}</div>
+                <div className="msg-preview">{msg.content?.substring(0, 100) || 'Aucun contenu'}…</div>
+              </div>
+              <div className="msg-meta">
+                <div className="msg-date">{formatDate(msg.sent_at || msg.created_at)}</div>
+                {!msg.read_at && <div className="unread-dot" />}
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="msg-row msg-unread">
-          <div className="msg-club-icon" style={{ background: '#E6FFE6' }}>🌱</div>
-          <div className="msg-body">
-            <div className="msg-club">Club Environnement</div>
-            <div className="msg-subject">Journée nettoyage — Informations pratiques</div>
-            <div className="msg-preview">Voici les informations pratiques pour participer à la journée nettoyage…</div>
-          </div>
-          <div className="msg-meta"><div className="msg-date">1 avr. 2025</div><div className="unread-dot" /></div>
-        </div>
-        <div className="msg-row">
-          <div className="msg-club-icon" style={{ background: '#E6F0FF' }}>💡</div>
-          <div className="msg-body">
-            <div className="msg-club">Club Tech & Innovation</div>
-            <div className="msg-subject">Résumé de la Conférence IA</div>
-            <div className="msg-preview">Merci à tous d'avoir participé à la conférence. Voici un résumé des points…</div>
-          </div>
-          <div className="msg-meta"><div className="msg-date">20 mar. 2025</div></div>
-        </div>
-      </div>
+      )}
     </>
   )
 }

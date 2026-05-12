@@ -63,7 +63,7 @@ export default function Clubs() {
         <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#1A1A2E', marginBottom: '18px' }}>
           Tous les clubs du campus
         </h1>
-        <button
+        {/* <button
           onClick={() => navigate('/clubs/create')}
           style={{
             background: '#E94560', color: 'white', border: 'none', borderRadius: '10px',
@@ -72,7 +72,7 @@ export default function Clubs() {
           }}
         >
           + Créer un club
-        </button>
+        </button> */}   
       </div>
 
       {/* Filtres */}
