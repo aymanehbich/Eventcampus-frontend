@@ -14,6 +14,7 @@ import EventDetail from './pages/student/EventDetail'
 import EventInscrits from './pages/organiser/EventInscrits'
 import MesEvenements from './pages/organiser/MesEvenements'
 import CreateEvent from './pages/organiser/CreateEvent'
+import EditEvent from './pages/organiser/EditEvent'
 import Adhesions from './pages/organiser/Adhesions'
 import Messaging from './pages/organiser/Messaging'
 
@@ -102,6 +103,14 @@ function App() {
           element={
             <ProtectedRoute role="organisateur">
               <CreateEvent />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/organiser/events/:id/edit"
+          element={
+            <ProtectedRoute role="organisateur">
+              <EditEvent />
             </ProtectedRoute>
           }
         />
