@@ -72,11 +72,21 @@ export default function MesEvenements() {
 
       {/* Main */}
       <div style={s.main}>
-        <div style={{ marginBottom: '24px' }}>
-          <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', color: '#1A1A2E' }}>Mes événements</h2>
-          <div style={{ fontSize: '13px', color: '#7A7A8C', marginTop: '4px' }}>
-            {events.length} événement{events.length !== 1 ? 's' : ''} créé{events.length !== 1 ? 's' : ''}
+        <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+          <div>
+            <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', color: '#1A1A2E' }}>Mes événements</h2>
+            <div style={{ fontSize: '13px', color: '#7A7A8C', marginTop: '4px' }}>
+              {events.length} événement{events.length !== 1 ? 's' : ''} créé{events.length !== 1 ? 's' : ''}
+            </div>
           </div>
+          <button
+            onClick={() => navigate('/organiser/events/create')}
+            style={{ background: '#E94560', color: 'white', border: 'none', borderRadius: '10px', padding: '12px 24px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', marginTop: '2px', transition: 'opacity 0.15s' }}
+            onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+            onMouseLeave={(e) => e.target.style.opacity = '1'}
+          >
+            ➕ Créer un événement
+          </button>
         </div>
 
         {loading ? (
