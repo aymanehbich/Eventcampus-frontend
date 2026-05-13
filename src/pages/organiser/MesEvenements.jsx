@@ -98,7 +98,7 @@ export default function MesEvenements() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
               <thead>
                 <tr>
-                  {['Événement', 'Date', 'Lieu', 'Inscrits', 'Actions'].map(h => (
+                  {['Événement', 'Date', 'Lieu', 'Inscrits', 'Statut', 'Actions'].map(h => (
                     <th key={h} style={{ background: '#F4F4F6', padding: '10px 16px', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#7A7A8C', fontWeight: 600 }}>{h}</th>
                   ))}
                 </tr>
@@ -106,7 +106,7 @@ export default function MesEvenements() {
               <tbody>
                 {events.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#7A7A8C', fontSize: '13px' }}>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#7A7A8C', fontSize: '13px' }}>
                       Vous n'avez créé aucun événement.
                     </td>
                   </tr>
@@ -137,12 +137,33 @@ export default function MesEvenements() {
                           <span style={{ color: '#7A7A8C' }}> / {totalPlaces}</span>
                         </td>
                         <td style={tdStyle}>
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          {evt.statut === 'En attente' ? (
+                            <span style={{ background: '#FFF4E6', color: '#FF9500', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
+                              ⏱️ En attente
+                            </span>
+                          ) : evt.statut === 'Accepté' ? (
+                            <span style={{ background: '#E6FFE6', color: '#4CAF50', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
+                              ✅ Publié
+                            </span>
+                          ) : (
+                            <span style={{ background: '#FFE6E6', color: '#E94560', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
+                              ❌ Rejeté
+                            </span>
+                          )}
+                        </td>
+                        <td style={tdStyle}>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             <button
                               onClick={() => navigate(`/organiser/events/${evt.id}/inscrits`)}
                               style={{ background: '#EEF0FF', color: '#4A4AE8', border: 'none', borderRadius: '8px', padding: '7px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
                             >
                               👥 Voir inscrits
+                            </button>
+                            <button
+                              onClick={() => navigate(`/organiser/events/${evt.id}/edit`)}
+                              style={{ background: '#FFF4E6', color: '#FF9500', border: 'none', borderRadius: '8px', padding: '7px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              ✏️ Modifier
                             </button>
                             <button
                               onClick={() => setConfirmId(evt.id)}

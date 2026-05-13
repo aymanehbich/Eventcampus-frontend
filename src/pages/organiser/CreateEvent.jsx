@@ -9,6 +9,7 @@ export default function CreateEvent() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [fieldErrors, setFieldErrors] = useState({})
   const [clubsLoading, setClubsLoading] = useState(true)
   const [clubs, setClubs] = useState([])
   const [formData, setFormData] = useState({
@@ -45,65 +46,35 @@ export default function CreateEvent() {
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: undefined }))
+    }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
+    setFieldErrors({})
 
-    if (!formData.titre.trim()) {
-      setError('Le titre est requis.')
-      return
-    }
-    if (!formData.date) {
-      setError('La date de début est requise.')
-      return
-    }
-    if (!formData.heure) {
-      setError('L\'heure de début est requise.')
-      return
-    }
-    if (!formData.date_fin) {
-      setError('La date de fin est requise.')
-      return
-    }
-    if (!formData.heure_fin) {
-      setError('L\'heure de fin est requise.')
-      return
-    }
-    if (!formData.lieu.trim()) {
-      setError('Le lieu est requis.')
-      return
-    }
-    if (!formData.description.trim()) {
-      setError('La description est requise.')
-      return
-    }
-    if (!formData.categorie) {
-      setError('La catégorie est requise.')
-      return
-    }
-    if (!formData.capacite_max || formData.capacite_max <= 0) {
-      setError('La capacité doit être supérieure à 0.')
-      return
-    }
-    if (!formData.club_id) {
-      setError('Veuillez sélectionner un club.')
-      return
+    const payload = {
+      ...formData,
+      capacite_max: formData.capacite_max ? parseInt(formData.capacite_max, 10) : '',
+      club_id: formData.club_id ? parseInt(formData.club_id, 10) : '',
     }
 
     setLoading(true)
     try {
-      const payload = {
-        ...formData,
-        capacite_max: parseInt(formData.capacite_max, 10),
-        club_id: parseInt(formData.club_id, 10),
-      }
       await createEvent(payload)
       navigate('/organiser/events')
     } catch (err) {
-      const msg = err.response?.data?.message || 'Une erreur est survenue.'
-      setError(msg)
+      if (err.response?.status === 422 && err.response?.data?.errors) {
+        setFieldErrors(err.response.data.errors)
+        setError('Veuillez corriger les erreurs ci-dessous.')
+      } else {
+        const msg = err.response?.data?.message || 'Une erreur est survenue.'
+        setError(msg)
+        setFieldErrors({})
+      }
     } finally {
       setLoading(false)
     }
@@ -120,14 +91,40 @@ export default function CreateEvent() {
     formGroup: { marginBottom: '20px' },
     formRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' },
     label: { display: 'block', fontSize: '13px', fontWeight: 600, color: '#1A1A2E', marginBottom: '8px' },
-    input: { width: '100%', padding: '11px 14px', fontSize: '13px', border: '1.5px solid #E0E0E6', borderRadius: '8px', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box', transition: 'border-color 0.15s' },
-    select: { width: '100%', padding: '11px 14px', fontSize: '13px', border: '1.5px solid #E0E0E6', borderRadius: '8px', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box', backgroundColor: 'white', cursor: 'pointer', transition: 'border-color 0.15s' },
-    textarea: { width: '100%', padding: '11px 14px', fontSize: '13px', border: '1.5px solid #E0E0E6', borderRadius: '8px', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box', minHeight: '100px', resize: 'vertical', transition: 'border-color 0.15s' },
+    fieldError: { fontSize: '12px', color: '#E94560', marginTop: '4px' },
     buttonGroup: { display: 'flex', gap: '12px', marginTop: '28px' },
     submitBtn: { flex: 1, background: '#E94560', color: 'white', border: 'none', borderRadius: '10px', padding: '12px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' },
     cancelBtn: { flex: 1, background: '#F4F4F6', color: '#1A1A2E', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '12px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' },
     errorMsg: { background: '#FFE6E6', border: '1px solid #FFB3B3', color: '#E94560', padding: '12px', borderRadius: '8px', fontSize: '13px', marginBottom: '20px' },
   }
+
+  const getFieldError = (fieldName) => {
+    const errors = fieldErrors[fieldName]
+    return Array.isArray(errors) ? errors[0] : errors
+  }
+
+  const getInputStyle = (fieldName) => ({
+    width: '100%',
+    padding: '11px 14px',
+    fontSize: '13px',
+    border: fieldErrors[fieldName] ? '1.5px solid #E94560' : '1.5px solid #E0E0E6',
+    borderRadius: '8px',
+    fontFamily: "'DM Sans', sans-serif",
+    boxSizing: 'border-box',
+    transition: 'border-color 0.15s',
+  })
+
+  const getSelectStyle = (fieldName) => ({
+    ...getInputStyle(fieldName),
+    backgroundColor: 'white',
+    cursor: 'pointer',
+  })
+
+  const getTextareaStyle = (fieldName) => ({
+    ...getInputStyle(fieldName),
+    minHeight: '100px',
+    resize: 'vertical',
+  })
 
   if (clubsLoading) {
     return (
@@ -204,7 +201,7 @@ export default function CreateEvent() {
                 name="club_id"
                 value={formData.club_id}
                 onChange={handleChange}
-                style={s.select}
+                style={getSelectStyle('club_id')}
               >
                 <option value="">Sélectionner un club</option>
                 {clubs.map(club => (
@@ -213,6 +210,7 @@ export default function CreateEvent() {
                   </option>
                 ))}
               </select>
+              {getFieldError('club_id') && <div style={s.fieldError}>{getFieldError('club_id')}</div>}
             </div>
 
             <div style={s.formGroup}>
@@ -223,8 +221,9 @@ export default function CreateEvent() {
                 value={formData.titre}
                 onChange={handleChange}
                 placeholder="Ex: Conférence sur l'IA"
-                style={s.input}
+                style={getInputStyle('titre')}
               />
+              {getFieldError('titre') && <div style={s.fieldError}>{getFieldError('titre')}</div>}
             </div>
 
             <div style={s.formGroup}>
@@ -233,13 +232,14 @@ export default function CreateEvent() {
                 name="categorie"
                 value={formData.categorie}
                 onChange={handleChange}
-                style={s.select}
+                style={getSelectStyle('categorie')}
               >
                 <option value="">Sélectionner une catégorie</option>
                 {CATEGORIES.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
+              {getFieldError('categorie') && <div style={s.fieldError}>{getFieldError('categorie')}</div>}
             </div>
 
             <div style={s.formGroup}>
@@ -249,8 +249,9 @@ export default function CreateEvent() {
                 value={formData.description}
                 onChange={handleChange}
                 placeholder="Décrivez votre événement..."
-                style={s.textarea}
+                style={getTextareaStyle('description')}
               />
+              {getFieldError('description') && <div style={s.fieldError}>{getFieldError('description')}</div>}
             </div>
 
             <div style={s.formGroup}>
@@ -261,8 +262,9 @@ export default function CreateEvent() {
                 value={formData.lieu}
                 onChange={handleChange}
                 placeholder="Ex: Amphithéâtre A"
-                style={s.input}
+                style={getInputStyle('lieu')}
               />
+              {getFieldError('lieu') && <div style={s.fieldError}>{getFieldError('lieu')}</div>}
             </div>
 
             <div style={{ marginBottom: '20px' }}>
@@ -274,8 +276,9 @@ export default function CreateEvent() {
                     name="date"
                     value={formData.date}
                     onChange={handleChange}
-                    style={s.input}
+                    style={getInputStyle('date')}
                   />
+                  {getFieldError('date') && <div style={s.fieldError}>{getFieldError('date')}</div>}
                 </div>
                 <div>
                   <input
@@ -283,8 +286,9 @@ export default function CreateEvent() {
                     name="heure"
                     value={formData.heure}
                     onChange={handleChange}
-                    style={s.input}
+                    style={getInputStyle('heure')}
                   />
+                  {getFieldError('heure') && <div style={s.fieldError}>{getFieldError('heure')}</div>}
                 </div>
               </div>
             </div>
@@ -298,8 +302,9 @@ export default function CreateEvent() {
                     name="date_fin"
                     value={formData.date_fin}
                     onChange={handleChange}
-                    style={s.input}
+                    style={getInputStyle('date_fin')}
                   />
+                  {getFieldError('date_fin') && <div style={s.fieldError}>{getFieldError('date_fin')}</div>}
                 </div>
                 <div>
                   <input
@@ -307,8 +312,9 @@ export default function CreateEvent() {
                     name="heure_fin"
                     value={formData.heure_fin}
                     onChange={handleChange}
-                    style={s.input}
+                    style={getInputStyle('heure_fin')}
                   />
+                  {getFieldError('heure_fin') && <div style={s.fieldError}>{getFieldError('heure_fin')}</div>}
                 </div>
               </div>
             </div>
@@ -322,8 +328,9 @@ export default function CreateEvent() {
                 onChange={handleChange}
                 placeholder="Ex: 50"
                 min="1"
-                style={s.input}
+                style={getInputStyle('capacite_max')}
               />
+              {getFieldError('capacite_max') && <div style={s.fieldError}>{getFieldError('capacite_max')}</div>}
             </div>
 
             <div style={s.buttonGroup}>

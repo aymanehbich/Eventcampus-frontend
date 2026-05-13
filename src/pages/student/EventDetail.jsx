@@ -77,6 +77,12 @@ export default function EventDetail() {
 
   const handleRegister = async () => {
     if (!event) return
+
+    if (event.statut === 'En attente') {
+      alert('Cet événement est en attente d\'approbation de l\'admin. Vous ne pouvez pas vous inscrire pour le moment.')
+      return
+    }
+
     setRegistering(true)
     try {
       await registerEvent(id)
@@ -194,7 +200,19 @@ export default function EventDetail() {
           <div style={{ background: 'white', borderRadius: '14px', border: isFull && userState !== 'registered' ? '1.5px solid #f5c97a' : '1.5px solid #E0E0E6', padding: '22px', marginBottom: '16px' }}>
             <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1A1A2E', marginBottom: '14px' }}>Places disponibles</h4>
 
-            {userState === 'waitlisted' ? (
+            {event.statut === 'En attente' ? (
+              <div style={{ background: '#FFF4E6', border: '1.5px solid #FFB347', borderRadius: '10px', padding: '16px', textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏱️</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#FF9500', marginBottom: '6px' }}>
+                  En attente d'approbation
+                </div>
+                <div style={{ fontSize: '12px', color: '#FF9500', lineHeight: '1.5' }}>
+                  Cet événement est en attente d'approbation de l'administrateur.
+                  <br />
+                  Les inscriptions seront ouvertes dès qu'il sera approuvé.
+                </div>
+              </div>
+            ) : userState === 'waitlisted' ? (
               // --- BLOC LISTE D'ATTENTE MIS À JOUR (Branche 3) ---
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
