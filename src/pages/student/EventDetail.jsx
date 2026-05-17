@@ -64,6 +64,7 @@ export default function EventDetail() {
 
       if (eventData.is_registered) {
         setUserState('registered')
+        setCalendarAdded(eventData.calendar_added ?? false)
       } else if (eventData.is_waitlisted) {
         setUserState('waitlisted')
         setWaitlistPosition(eventData.waitlist_position ?? null)
