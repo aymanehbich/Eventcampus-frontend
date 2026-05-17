@@ -21,5 +21,5 @@ export const activateRole = (userId, role) => {
 }
 
 export const getPendingClubs = () => api.get('/admin/clubs/pending')
-export const approveClub     = (id) => api.put(`/admin/clubs/${id}/approve`)
-export const rejectClub      = (id) => api.put(`/admin/clubs/${id}/reject`)
+export const approveClub     = (id) => api.put(`/admin/clubs/${id}/valider`)
+export const rejectClub      = (id) => api.put(`/admin/clubs/${id}/refuser`)
