@@ -3,10 +3,11 @@ import { updatePreferences } from '../../api/auth'
 import { getClubs } from '../../api/clubs'
 import Navbar from '../../components/Navbar'
 import './Profile.css'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getMyInscriptions } from '../../api/profil'
 import { unregisterEvent } from '../../api/events'
 import { getNotifications } from '../../api/notifications'
+import { getCalendarAuthUrl, getCalendarStatus, disconnectCalendar } from '../../api/googleCalendar'
 
 const TABS = ['Mes inscriptions', 'Mes clubs', 'Messages', 'Notifications', 'Préférences']
 
@@ -18,6 +19,9 @@ function Profile() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [unreadNotifCount, setUnreadNotifCount] = useState(0)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [calendarConnected, setCalendarConnected] = useState(false)
+  const [calendarMsg, setCalendarMsg] = useState(null)
 
   useEffect(() => {
     getNotifications()
@@ -26,6 +30,24 @@ function Profile() {
         setUnreadNotifCount(list.filter(n => !n.read_at).length)
       })
       .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    // Charger le statut de connexion Google Calendar
+    getCalendarStatus()
+      .then(res => setCalendarConnected(res.data.connected))
+      .catch(() => {})
+
+    // Gérer le retour OAuth2 Google Calendar
+    const calendarParam = searchParams.get('calendar')
+    if (calendarParam === 'success') {
+      setCalendarConnected(true)
+      setCalendarMsg({ type: 'success', text: '✅ Google Agenda connecté avec succès !' })
+      setSearchParams({})
+    } else if (calendarParam === 'error') {
+      setCalendarMsg({ type: 'error', text: '❌ Erreur lors de la connexion à Google Agenda.' })
+      setSearchParams({})
+    }
   }, [])
 
   useEffect(() => {
@@ -100,6 +122,25 @@ function Profile() {
             message={message}
             error={error}
             onToggle={handleToggle}
+            calendarConnected={calendarConnected}
+            calendarMsg={calendarMsg}
+            onCalendarConnect={async () => {
+              try {
+                const res = await getCalendarAuthUrl()
+                window.location.href = res.data.url
+              } catch {
+                setCalendarMsg({ type: 'error', text: 'Impossible d\'obtenir le lien de connexion.' })
+              }
+            }}
+            onCalendarDisconnect={async () => {
+              try {
+                await disconnectCalendar()
+                setCalendarConnected(false)
+                setCalendarMsg({ type: 'success', text: 'Google Agenda déconnecté.' })
+              } catch {
+                setCalendarMsg({ type: 'error', text: 'Une erreur est survenue.' })
+              }
+            }}
           />
         )}
       </div>
@@ -466,7 +507,7 @@ function NotificationsTab() {
   )
 }
 
-function PreferencesTab({ emailReminders, loading, message, error, onToggle }) {
+function PreferencesTab({ emailReminders, loading, message, error, onToggle, calendarConnected, calendarMsg, onCalendarConnect, onCalendarDisconnect }) {
   return (
     <>
       <div className="section-header"><h3>Préférences de notifications</h3></div>
@@ -507,6 +548,51 @@ function PreferencesTab({ emailReminders, loading, message, error, onToggle }) {
 
       {message && <div className="profile-msg profile-msg--success">{message}</div>}
       {error && <div className="profile-msg profile-msg--error">{error}</div>}
+
+      {/* ── Google Agenda ── */}
+      <div className="section-header" style={{ marginTop: '28px' }}><h3>Intégrations</h3></div>
+      <div className="notif-card">
+        <div className="notif-card-title">📅 Google Agenda</div>
+        <div className="toggle-row" style={{ alignItems: 'center' }}>
+          <div>
+            <div className="toggle-label">Synchroniser avec Google Agenda</div>
+            <div className="toggle-sub">
+              {calendarConnected
+                ? 'Votre Google Agenda est connecté. Les événements s\'ajouteront automatiquement après chaque inscription.'
+                : 'Connectez votre Google Agenda pour ajouter automatiquement les événements auxquels vous vous inscrivez.'}
+            </div>
+          </div>
+          <button
+            onClick={calendarConnected ? onCalendarDisconnect : onCalendarConnect}
+            style={{
+              padding: '9px 18px',
+              borderRadius: '8px',
+              border: calendarConnected ? '1.5px solid #E0E0E6' : 'none',
+              background: calendarConnected ? 'white' : 'linear-gradient(135deg, #4285F4, #1a73e8)',
+              color: calendarConnected ? '#7A7A8C' : 'white',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            {calendarConnected ? 'Déconnecter' : '🔗 Connecter'}
+          </button>
+        </div>
+        {calendarConnected && (
+          <div style={{ marginTop: '8px', fontSize: '12px', color: '#2ECC71', fontWeight: 600 }}>
+            ✅ Connecté
+          </div>
+        )}
+      </div>
+
+      {calendarMsg && (
+        <div className={`profile-msg ${calendarMsg.type === 'success' ? 'profile-msg--success' : 'profile-msg--error'}`}>
+          {calendarMsg.text}
+        </div>
+      )}
 
       <div className="email-preview-label">Aperçu de l'email de rappel</div>
       <div className="email-preview">
