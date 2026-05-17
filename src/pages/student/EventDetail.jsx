@@ -47,6 +47,8 @@ export default function EventDetail() {
   const [waitlistPosition, setWaitlistPosition] = useState(null)
   const [waitlistTotal, setWaitlistTotal] = useState(null)
   const [calendarMsg, setCalendarMsg] = useState(null) // { type: 'success'|'info', text: string }
+  const [addingToCalendar, setAddingToCalendar] = useState(false)
+  const [calendarAdded, setCalendarAdded] = useState(false)
 
   useEffect(() => {
     fetchEvent()
@@ -127,6 +129,23 @@ export default function EventDetail() {
       alert('Une erreur est survenue.')
     } finally {
       setRegistering(false)
+    }
+  }
+
+  const handleAddToCalendar = async () => {
+    setAddingToCalendar(true)
+    try {
+      const res = await addEventToCalendar(id)
+      if (res.data.calendar_added) {
+        setCalendarAdded(true)
+        setCalendarMsg({ type: 'success', text: '📅 Ajouté à votre Google Agenda !' })
+      } else {
+        setCalendarMsg({ type: 'info', text: '💡 Connectez votre Google Agenda dans votre profil pour l\'ajouter.' })
+      }
+    } catch {
+      setCalendarMsg({ type: 'error', text: 'Impossible d\'ajouter à Google Agenda.' })
+    } finally {
+      setAddingToCalendar(false)
     }
   }
 
@@ -297,6 +316,28 @@ export default function EventDetail() {
                   <>
                     <button onClick={handleUnregister} disabled={registering} style={{ width: '100%', background: 'linear-gradient(135deg, #2ECC71, #27AE60)', color: 'white', border: 'none', borderRadius: '12px', padding: '14px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginTop: '16px' }}>
                       ✓ Inscrit (Annuler ?)
+                    </button>
+                    <button
+                      onClick={handleAddToCalendar}
+                      disabled={addingToCalendar || calendarAdded}
+                      style={{
+                        width: '100%',
+                        background: calendarAdded ? '#E8F8F0' : 'white',
+                        color: calendarAdded ? '#1a7a47' : '#4A4AE8',
+                        border: `1.5px solid ${calendarAdded ? '#b2dfcd' : '#c5caf5'}`,
+                        borderRadius: '10px',
+                        padding: '10px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: calendarAdded ? 'default' : 'pointer',
+                        marginTop: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      {calendarAdded ? '✓ Ajouté au Google Agenda' : addingToCalendar ? 'Ajout en cours...' : '📅 Ajouter à Google Agenda'}
                     </button>
                     {calendarMsg && (
                       <div style={{
