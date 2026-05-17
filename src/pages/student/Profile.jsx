@@ -44,6 +44,9 @@ function Profile() {
       setCalendarConnected(true)
       setCalendarMsg({ type: 'success', text: '✅ Google Agenda connecté avec succès !' })
       setSearchParams({})
+    } else if (calendarParam === 'denied') {
+      setCalendarMsg({ type: 'warning', text: "⚠️ Vous avez refusé l'accès à Google Agenda." })
+      setSearchParams({})
     } else if (calendarParam === 'error') {
       setCalendarMsg({ type: 'error', text: '❌ Erreur lors de la connexion à Google Agenda.' })
       setSearchParams({})
@@ -558,7 +561,7 @@ function PreferencesTab({ emailReminders, loading, message, error, onToggle, cal
             <div className="toggle-label">Synchroniser avec Google Agenda</div>
             <div className="toggle-sub">
               {calendarConnected
-                ? 'Votre Google Agenda est connecté. Les événements s\'ajouteront automatiquement après chaque inscription.'
+                ? 'Votre Google Agenda est connecté.'
                 : 'Connectez votre Google Agenda pour ajouter automatiquement les événements auxquels vous vous inscrivez.'}
             </div>
           </div>
@@ -589,7 +592,11 @@ function PreferencesTab({ emailReminders, loading, message, error, onToggle, cal
       </div>
 
       {calendarMsg && (
-        <div className={`profile-msg ${calendarMsg.type === 'success' ? 'profile-msg--success' : 'profile-msg--error'}`}>
+        <div className={`profile-msg ${
+          calendarMsg.type === 'success' ? 'profile-msg--success'
+          : calendarMsg.type === 'warning' ? 'profile-msg--warning'
+          : 'profile-msg--error'
+        }`}>
           {calendarMsg.text}
         </div>
       )}
