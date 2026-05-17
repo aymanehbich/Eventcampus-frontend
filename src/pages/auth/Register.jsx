@@ -8,8 +8,8 @@ function getRedirect() {
   const token = localStorage.getItem('token')
   const user = JSON.parse(localStorage.getItem('user') || 'null')
   if (!token || !user) return null
-  if (user.role === 'etudiant') return '/student/clubs'
-  if (user.role === 'organisateur') return '/organiser'
+  if (user.role === 'etudiant') return '/student/events'
+  if (user.role === 'organisateur') return '/organiser/dashboard'
   return '/'
 }
 

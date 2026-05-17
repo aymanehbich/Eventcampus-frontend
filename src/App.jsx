@@ -6,7 +6,7 @@ import StudentDashboard from './pages/student/Dashboard'
 
 import ProtectedRoute from './router/ProtectedRoute'
 import Profile from './pages/student/Profile'
-import CreateClub from './pages/student/CreateClub'
+import CreateClub from './pages/organiser/CreateClub'
 import Clubs from './pages/student/Clubs'
 import ClubDetail from './pages/student/ClubDetail'
 import Events from './pages/student/Events'
@@ -19,6 +19,9 @@ import Adhesions from './pages/organiser/Adhesions'
 import Messaging from './pages/organiser/Messaging'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import MesClubs from './pages/organiser/MesClubs'
+import EditClub from './pages/organiser/EditClub'
+import OrganizerDashboard from './pages/organiser/OrganizerDashboard'
 
 function App() {
   return (
@@ -75,14 +78,6 @@ function App() {
           }
         />
         <Route
-          path="/clubs/create"
-          element={
-            <ProtectedRoute>
-              <CreateClub />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/student/clubs/:id"
           element={
             <ProtectedRoute role="etudiant">
@@ -93,6 +88,14 @@ function App() {
         />
 
         {/* Routes organisateur */}
+        <Route
+          path="/organiser/dashboard"
+          element={
+            <ProtectedRoute role="organisateur">
+              <OrganizerDashboard />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/organiser/events"
           element={
@@ -140,6 +143,30 @@ function App() {
           element={
             <ProtectedRoute role="organisateur">
               <Messaging />
+            </ProtectedRoute>
+          }
+        />
+         <Route
+          path="/organiser/clubs"
+          element={
+            <ProtectedRoute role="organisateur">
+              <MesClubs />
+            </ProtectedRoute>
+          }
+        />
+         <Route
+          path="/organiser/clubs/create"
+          element={
+            <ProtectedRoute role="organisateur">
+              <CreateClub />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/organiser/clubs/:id/edit"
+          element={
+            <ProtectedRoute role="organisateur">
+              <EditClub />
             </ProtectedRoute>
           }
         />

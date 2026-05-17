@@ -61,14 +61,14 @@ export default function ClubDetail() {
         }))
       } else {
         await joinClub(id)
-        setClub(prev => ({
-          ...prev,
-          is_member: true,
-          membres_count: (prev.membres_count ?? 0) + 1,
-        }))
+        setClub(prev => ({ ...prev, is_pending: true }))
       }
-    } catch {
-      alert('Une erreur est survenue.')
+    } catch (err) {
+      if (err.response?.status === 409) {
+        setClub(prev => ({ ...prev, is_pending: true }))
+      } else {
+        alert('Une erreur est survenue.')
+      }
     } finally {
       setJoining(false)
     }
@@ -138,20 +138,29 @@ export default function ClubDetail() {
         </div>
 
         <button
-          onClick={handleJoinLeave}
-          disabled={joining}
+          onClick={club.is_member ? handleJoinLeave : club.is_pending ? undefined : handleJoinLeave}
+          disabled={joining || club.is_pending}
           style={{
             padding: '14px 32px', borderRadius: '12px', fontSize: '14px',
-            fontWeight: 700, cursor: joining ? 'wait' : 'pointer',
+            fontWeight: 700,
+            cursor: joining ? 'wait' : club.is_pending ? 'default' : 'pointer',
             fontFamily: "'DM Sans', sans-serif", flexShrink: 0,
-            background: club.is_member ? 'transparent' : 'linear-gradient(135deg, #E94560, #C0392B)',
-            color: club.is_member ? '#E94560' : 'white',
-            border: club.is_member ? '2px solid #E94560' : '2px solid transparent',
-            boxShadow: club.is_member ? 'none' : '0 4px 14px rgba(233,69,96,0.4)',
+            background: club.is_member
+              ? 'transparent'
+              : club.is_pending
+                ? '#F4F4F6'
+                : 'linear-gradient(135deg, #E94560, #C0392B)',
+            color: club.is_member ? '#E94560' : club.is_pending ? '#7A7A8C' : 'white',
+            border: club.is_member
+              ? '2px solid #E94560'
+              : club.is_pending
+                ? '2px solid #E0E0E6'
+                : '2px solid transparent',
+            boxShadow: club.is_member || club.is_pending ? 'none' : '0 4px 14px rgba(233,69,96,0.4)',
             transition: 'all 0.2s', opacity: joining ? 0.7 : 1,
           }}
         >
-          {joining ? '...' : club.is_member ? '✓ Membre' : 'Rejoindre ce club'}
+          {joining ? '...' : club.is_member ? '✓ Membre' : club.is_pending ? '⏳ Demande en attente' : 'Rejoindre ce club'}
         </button>
       </div>
 

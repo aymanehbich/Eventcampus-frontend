@@ -21,9 +21,9 @@ function GoogleCallback() {
       localStorage.setItem('user', JSON.stringify(user))
 
       if (user.role === 'etudiant') {
-        navigate('/student/clubs', { replace: true })
+        navigate('/student/events', { replace: true })
       } else if (user.role === 'organisateur') {
-        navigate('/organiser', { replace: true })
+        navigate('/organiser/dashboard', { replace: true })
       } else {
         navigate('/', { replace: true })
       }

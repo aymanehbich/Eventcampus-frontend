@@ -240,7 +240,7 @@ export default function Messaging() {
         <div className="messaging-nav-item" onClick={() => navigate('/organiser/events')}>
           📊 Dashboard
         </div>
-        <div className="messaging-nav-item" onClick={() => navigate('/organiser/club')}>
+        <div className="messaging-nav-item" onClick={() => navigate('/organiser/clubs')}>
           🏛️ Mon club
         </div>
         <div className="messaging-nav-item" onClick={() => navigate('/organiser/events')}>
@@ -250,6 +250,24 @@ export default function Messaging() {
           👥 Membres
         </div>
         <div className="messaging-nav-item active">✉️ Messages</div>
+        <div style={{ position: 'absolute', bottom: '24px', left: 0, width: '220px', boxSizing: 'border-box', padding: '0 16px' }}>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
+            <button
+              onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login') }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '11px 14px', borderRadius: '10px', border: '1px solid rgba(233,69,96,0.35)',
+                background: 'rgba(233,69,96,0.1)', color: '#E94560',
+                fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif", transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#E94560'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = '#E94560' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(233,69,96,0.1)'; e.currentTarget.style.color = '#E94560'; e.currentTarget.style.borderColor = 'rgba(233,69,96,0.35)' }}
+            >
+              <span style={{ fontSize: '16px' }}>🚪</span> Déconnexion
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Main Messaging Area */}

@@ -47,7 +47,7 @@ export default function MesEvenements() {
 
   const s = {
     layout: { display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" },
-    sidebar: { background: '#1A1A2E', padding: '24px 0' },
+    sidebar: { background: '#1A1A2E', padding: '24px 0', position: 'relative' },
     logo: { fontFamily: "'Fraunces', serif", fontSize: '18px', color: 'white', padding: '0 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '16px' },
     navItem: { padding: '11px 20px', fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.55)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' },
     navActive: { padding: '11px 20px', fontSize: '13px', fontWeight: 500, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(233,69,96,0.15)', borderRight: '3px solid #E94560' },
@@ -65,9 +65,28 @@ export default function MesEvenements() {
       <div style={s.sidebar}>
         <div style={s.logo}>Event<span style={{ color: '#E94560' }}>Campus</span></div>
         <div style={s.navItem} onClick={() => navigate('/organiser/dashboard')}>📊 Dashboard</div>
-        <div style={s.navItem} onClick={() => navigate('/organiser/club')}>🏛️ Mon club</div>
+        <div style={s.navItem} onClick={() => navigate('/organiser/clubs')}>🏛️ Mon club</div>
         <div style={s.navActive}>📅 Mes événements</div>
-        <div style={s.navItem} onClick={() => navigate('/organiser/membres')}>👥 Membres</div>
+        <div style={s.navItem} onClick={() => navigate('/organiser/adhesions')}>👥 Membres</div>
+        <div className="messaging-nav-item" onClick={() => navigate('/organiser/messages')}>✉️ Messages</div>
+        <div style={{ position: 'absolute', bottom: '24px', left: 0, width: '220px', boxSizing: 'border-box', padding: '0 16px' }}>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
+            <button
+              onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login') }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '11px 14px', borderRadius: '10px', border: '1px solid rgba(233,69,96,0.35)',
+                background: 'rgba(233,69,96,0.1)', color: '#E94560',
+                fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif", transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#E94560'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = '#E94560' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(233,69,96,0.1)'; e.currentTarget.style.color = '#E94560'; e.currentTarget.style.borderColor = 'rgba(233,69,96,0.35)' }}
+            >
+              <span style={{ fontSize: '16px' }}>🚪</span> Déconnexion
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Main */}
