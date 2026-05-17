@@ -49,6 +49,7 @@ export default function EventDetail() {
   const [calendarMsg, setCalendarMsg] = useState(null) // { type: 'success'|'info', text: string }
   const [addingToCalendar, setAddingToCalendar] = useState(false)
   const [calendarAdded, setCalendarAdded] = useState(false)
+  const [calendarNotConnected, setCalendarNotConnected] = useState(false)
 
   useEffect(() => {
     fetchEvent()
@@ -121,16 +122,19 @@ export default function EventDetail() {
 
   const handleAddToCalendar = async () => {
     setAddingToCalendar(true)
+    setCalendarNotConnected(false)
     try {
       const res = await addEventToCalendar(id)
       if (res.data.calendar_added) {
         setCalendarAdded(true)
         setCalendarMsg({ type: 'success', text: '📅 Ajouté à votre Google Agenda !' })
+      } else if (res.data.not_connected) {
+        setCalendarNotConnected(true)
       } else {
-        setCalendarMsg({ type: 'info', text: '💡 Connectez votre Google Agenda dans votre profil pour l\'ajouter.' })
+        setCalendarMsg({ type: 'error', text: "Impossible d'ajouter l'événement au calendrier." })
       }
     } catch {
-      setCalendarMsg({ type: 'error', text: 'Impossible d\'ajouter à Google Agenda.' })
+      setCalendarMsg({ type: 'error', text: "Impossible d'ajouter l'événement au calendrier." })
     } finally {
       setAddingToCalendar(false)
     }
@@ -326,6 +330,18 @@ export default function EventDetail() {
                     >
                       {calendarAdded ? '✓ Ajouté au Google Agenda' : addingToCalendar ? 'Ajout en cours...' : '📅 Ajouter à Google Agenda'}
                     </button>
+                    {calendarNotConnected && (
+                      <div style={{ marginTop: '10px', padding: '12px', borderRadius: '8px', background: '#FFF8E6', border: '1px solid #F5C97A', fontSize: '12px', color: '#7a4f00' }}>
+                        <div style={{ fontWeight: 600, marginBottom: '6px' }}>📅 Google Agenda non connecté</div>
+                        <div style={{ marginBottom: '8px', lineHeight: '1.5' }}>Connectez votre compte pour ajouter vos événements automatiquement.</div>
+                        <button
+                          onClick={() => navigate('/student/profile?tab=Préférences')}
+                          style={{ width: '100%', background: '#F5C97A', color: '#7a4f00', border: 'none', borderRadius: '6px', padding: '7px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Connecter Google Agenda →
+                        </button>
+                      </div>
+                    )}
                     {calendarMsg && (
                       <div style={{
                         marginTop: '10px',
@@ -333,9 +349,9 @@ export default function EventDetail() {
                         borderRadius: '8px',
                         fontSize: '12px',
                         fontWeight: 500,
-                        background: calendarMsg.type === 'success' ? '#E8F8F0' : '#EEF0FF',
-                        color: calendarMsg.type === 'success' ? '#1a7a47' : '#4A4AE8',
-                        border: `1px solid ${calendarMsg.type === 'success' ? '#b2dfcd' : '#c5caf5'}`,
+                        background: calendarMsg.type === 'success' ? '#E8F8F0' : '#FDECEA',
+                        color: calendarMsg.type === 'success' ? '#1a7a47' : '#c0392b',
+                        border: `1px solid ${calendarMsg.type === 'success' ? '#b2dfcd' : '#f5c6cb'}`,
                       }}>
                         {calendarMsg.text}
                       </div>
