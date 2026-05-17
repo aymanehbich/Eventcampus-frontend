@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { logout } from '../../api/auth'
-import { getUsers, getPendingUsers, activateUser, deactivateUser, activateRole } from '../../api/admin'
+import { getUsers, getPendingUsers, activateUser, deactivateUser, activateRole, getPendingClubs, approveClub, rejectClub } from '../../api/admin'
 
 function AdminDashboard() {
   const navigate = useNavigate()
@@ -18,6 +18,8 @@ function AdminDashboard() {
 
   const [users, setUsers] = useState([])
   const [pendingUsers, setPendingUsers] = useState([])
+  const [pendingClubs, setPendingClubs] = useState([])
+  const [clubMsg, setClubMsg] = useState(null)
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterRole, setFilterRole] = useState('')
@@ -28,6 +30,8 @@ function AdminDashboard() {
       fetchUsers()
     } else if (activeSection === 'validation') {
       fetchPendingUsers()
+    } else if (activeSection === 'clubs') {
+      fetchPendingClubs()
     }
   }, [activeSection, searchQuery, filterRole, filterStatus])
 
@@ -76,6 +80,38 @@ function AdminDashboard() {
       fetchUsers()
     } catch (err) {
       alert('Erreur lors de la désactivation')
+    }
+  }
+
+  const fetchPendingClubs = async () => {
+    setLoading(true)
+    try {
+      const res = await getPendingClubs()
+      setPendingClubs(Array.isArray(res.data) ? res.data : [])
+    } catch (err) {
+      console.error('Error fetching pending clubs:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleApproveClub = async (clubId) => {
+    try {
+      await approveClub(clubId)
+      setClubMsg({ type: 'success', text: 'Club approuvé avec succès.' })
+      fetchPendingClubs()
+    } catch {
+      setClubMsg({ type: 'error', text: "Erreur lors de l'approbation." })
+    }
+  }
+
+  const handleRejectClub = async (clubId) => {
+    try {
+      await rejectClub(clubId)
+      setClubMsg({ type: 'error', text: 'Club rejeté.' })
+      fetchPendingClubs()
+    } catch {
+      setClubMsg({ type: 'error', text: 'Erreur lors du refus.' })
     }
   }
 
@@ -140,6 +176,12 @@ function AdminDashboard() {
           ✅ Validations
         </div>
         <div
+          style={activeSection === 'clubs' ? s.navActive : s.navItem}
+          onClick={() => setActiveSection('clubs')}
+        >
+          🏛️ Clubs
+        </div>
+        <div
           style={activeSection === 'activity' ? s.navActive : s.navItem}
           onClick={() => setActiveSection('activity')}
         >
@@ -155,6 +197,7 @@ function AdminDashboard() {
               {activeSection === 'statistics' && '📊 Statistiques'}
               {activeSection === 'users' && '👥 Utilisateurs'}
               {activeSection === 'validation' && '✅ Validation des utilisateurs'}
+              {activeSection === 'clubs' && '🏛️ Validation des clubs'}
               {activeSection === 'activity' && '📋 Activité récente'}
             </h2>
           </div>
@@ -387,6 +430,69 @@ function AdminDashboard() {
                     </div>
                   )
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Clubs Validation Section */}
+        {activeSection === 'clubs' && (
+          <div>
+            {clubMsg && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '10px 16px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 500,
+                background: clubMsg.type === 'success' ? 'rgba(46,204,113,0.12)' : 'rgba(233,69,96,0.10)',
+                color: clubMsg.type === 'success' ? '#1a7a47' : '#E94560',
+              }}>
+                {clubMsg.text}
+              </div>
+            )}
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
+            ) : pendingClubs.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun club en attente de validation</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {pendingClubs.map((club) => (
+                  <div key={club.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '32px', flexShrink: 0 }}>{club.emoji || '🏛️'}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{club.nom}</div>
+                        <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.description}</div>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{club.categorie}</span>
+                          {club.createur && (
+                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {club.createur.name} ({club.createur.email})</span>
+                          )}
+                          <span style={{ fontSize: '11px', color: '#7A7A8C' }}>{new Date(club.created_at).toLocaleDateString('fr-FR')}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                      <button
+                        onClick={() => handleApproveClub(club.id)}
+                        style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                        onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                        onMouseLeave={(e) => e.target.style.opacity = '1'}
+                      >
+                        ✓ Approuver
+                      </button>
+                      <button
+                        onClick={() => handleRejectClub(club.id)}
+                        style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                        onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                        onMouseLeave={(e) => e.target.style.opacity = '1'}
+                      >
+                        ✕ Rejeter
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
