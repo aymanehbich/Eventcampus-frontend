@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { logout } from '../../api/auth'
-import { getUsers, getPendingUsers, activateUser, deactivateUser } from '../../api/admin'
+import { getUsers, getPendingUsers, activateUser, deactivateUser, activateRole } from '../../api/admin'
 
 function AdminDashboard() {
   const navigate = useNavigate()
@@ -76,6 +76,16 @@ function AdminDashboard() {
       fetchUsers()
     } catch (err) {
       alert('Erreur lors de la désactivation')
+    }
+  }
+
+  const handleActivateRole = async (userId, role) => {
+    try {
+      await activateRole(userId, role)
+      alert(`Rôle mis à jour avec succès`)
+      fetchUsers()
+    } catch (err) {
+      alert('Erreur lors du changement de rôle')
     }
   }
 
@@ -279,26 +289,50 @@ function AdminDashboard() {
                             </span>
                           </td>
                           <td style={tdStyle}>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              {(usr.status === 'inactive' || usr.status === 'inactif') ? (
-                                <button
-                                  onClick={() => handleActivateUser(usr.id)}
-                                  style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                                  onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                                  onMouseLeave={(e) => e.target.style.opacity = '1'}
-                                >
-                                  ✓ Activer
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleDeactivateUser(usr.id)}
-                                  style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                                  onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                                  onMouseLeave={(e) => e.target.style.opacity = '1'}
-                                >
-                                  ✕ Désactiver
-                                </button>
-                              )}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div>
+                                {(usr.status === 'inactive' || usr.status === 'inactif') ? (
+                                  <button
+                                    onClick={() => handleActivateUser(usr.id)}
+                                    style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                                    onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                                  >
+                                    ✓ Activer
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleDeactivateUser(usr.id)}
+                                    style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                                    onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                                  >
+                                    ✕ Désactiver
+                                  </button>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                {usr.role !== 'etudiant' && (
+                                  <button
+                                    onClick={() => handleActivateRole(usr.id, 'etudiant')}
+                                    style={{ background: '#4A4AE8', color: 'white', border: 'none', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                                    onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                                  >
+                                    🎓 Étudiant
+                                  </button>
+                                )}
+                                {usr.role !== 'organisateur' && (
+                                  <button
+                                    onClick={() => handleActivateRole(usr.id, 'organisateur')}
+                                    style={{ background: '#FF9500', color: 'white', border: 'none', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                                    onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                                  >
+                                    🏛️ Organisateur
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
