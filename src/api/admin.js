@@ -15,3 +15,7 @@ export const deactivateUser = (userId) => {
 export const getPendingUsers = () => {
   return api.get('/admin/users', { params: { status: 'pending' } })
 }
+
+export const activateRole = (userId, role) => {
+  return api.put(`/users/${userId}/roles/${role}/activate`)
+}
