@@ -17,6 +17,8 @@ import CreateEvent from './pages/organiser/CreateEvent'
 import EditEvent from './pages/organiser/EditEvent'
 import Adhesions from './pages/organiser/Adhesions'
 import Messaging from './pages/organiser/Messaging'
+import AdminLogin from './pages/admin/AdminLogin'
+import AdminDashboard from './pages/admin/AdminDashboard'
 
 function App() {
   return (
@@ -26,6 +28,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/auth/google/callback" element={<GoogleCallback />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
 
         {/* Redirect racine */}
         <Route path="/" element={<Navigate to="/login" replace />} />
@@ -140,6 +143,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Routes admin */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute role="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
