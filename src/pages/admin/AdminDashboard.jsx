@@ -41,7 +41,7 @@ function AdminDashboard() {
       const params = {}
       if (searchQuery) params.search = searchQuery
       if (filterRole) params.role = filterRole
-      if (filterStatus) params.status = filterStatus
+      if (filterStatus) params.role = filterStatus
       const res = await getUsers(params)
       setUsers(Array.isArray(res.data.data) ? res.data.data : res.data.data || [])
     } catch (err) {
@@ -288,8 +288,7 @@ function AdminDashboard() {
                 >
                   <option value="">Tous les statuts</option>
                   <option value="actif">Actif</option>
-                  <option value="inactif">Inactif</option>
-                  <option value="suspendu">Suspendu</option>
+                  <option value="banni">Inactif / Banni</option>
                 </select>
               </div>
             </div>
@@ -313,8 +312,9 @@ function AdminDashboard() {
                     {users.map((usr, i) => {
                       const isLast = i === users.length - 1
                       const tdStyle = { padding: '13px 16px', borderBottom: isLast ? 'none' : '1px solid #E0E0E6', color: '#1A1A2E', verticalAlign: 'middle' }
-                      const roleColor = usr.role === 'etudiant' ? { bg: '#EEF0FF', color: '#4A4AE8' } : usr.role === 'organisateur' ? { bg: '#FFF4E6', color: '#FF9500' } : { bg: '#E6FFE6', color: '#4CAF50' }
-                      const statusColor = usr.status === 'actif' || usr.status === 'active' ? { bg: '#E6FFE6', color: '#4CAF50' } : usr.status === 'inactif' || usr.status === 'inactive' ? { bg: '#FFE6E6', color: '#E94560' } : { bg: '#FFF4E6', color: '#FF9500' }
+                      const isBanned = usr.role === 'banni'
+                      const roleColor = usr.role === 'etudiant' ? { bg: '#EEF0FF', color: '#4A4AE8' } : usr.role === 'organisateur' ? { bg: '#FFF4E6', color: '#FF9500' } : usr.role === 'banni' ? { bg: '#FFE6E6', color: '#E94560' } : { bg: '#E6FFE6', color: '#4CAF50' }
+                      const statusColor = isBanned ? { bg: '#FFE6E6', color: '#E94560' } : { bg: '#E6FFE6', color: '#4CAF50' }
                       return (
                         <tr key={usr.id}>
                           <td style={tdStyle}>
@@ -323,18 +323,18 @@ function AdminDashboard() {
                           <td style={tdStyle}>{usr.email}</td>
                           <td style={tdStyle}>
                             <span style={{ background: roleColor.bg, color: roleColor.color, padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
-                              {usr.role === 'etudiant' ? '🎓 Étudiant' : usr.role === 'organisateur' ? '🏛️ Organisateur' : '⚙️ Admin'}
+                              {usr.role === 'etudiant' ? '🎓 Étudiant' : usr.role === 'organisateur' ? '🏛️ Organisateur' : usr.role === 'banni' ? '🚫 Banni' : '⚙️ Admin'}
                             </span>
                           </td>
                           <td style={tdStyle}>
                             <span style={{ background: statusColor.bg, color: statusColor.color, padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
-                              {usr.status === 'active' || usr.status === 'actif' ? '✅ Actif' : usr.status === 'inactive' || usr.status === 'inactif' ? '❌ Inactif' : '⏸️ Suspendu'}
+                              {isBanned ? '❌ Inactif' : '✅ Actif'}
                             </span>
                           </td>
                           <td style={tdStyle}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               <div>
-                                {(usr.status === 'inactive' || usr.status === 'inactif') ? (
+                                {isBanned ? (
                                   <button
                                     onClick={() => handleActivateUser(usr.id)}
                                     style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
