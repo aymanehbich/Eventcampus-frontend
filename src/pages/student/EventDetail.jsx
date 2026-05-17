@@ -92,21 +92,7 @@ export default function EventDetail() {
     try {
       await registerEvent(id)
       // On rafraîchit les données pour avoir les positions exactes de la liste d'attente
-      const updatedEvent = await fetchEvent()
-
-      // Ajouter au Google Agenda uniquement si l'inscription est confirmée (pas liste d'attente)
-      if (updatedEvent?.is_registered) {
-        try {
-          const calRes = await addEventToCalendar(id)
-          if (calRes.data.calendar_added) {
-            setCalendarMsg({ type: 'success', text: '📅 Ajouté à votre Google Agenda !' })
-          } else {
-            setCalendarMsg({ type: 'info', text: '💡 Connectez votre Google Agenda dans votre profil pour l\'ajouter automatiquement.' })
-          }
-        } catch {
-          // Calendrier non critique — ignorer silencieusement
-        }
-      }
+      await fetchEvent()
     } catch (err) {
       alert('Une erreur est survenue lors de l\'inscription.')
     } finally {
