@@ -9,8 +9,8 @@ function getRedirect() {
   const token = localStorage.getItem('token')
   const user = JSON.parse(localStorage.getItem('user') || 'null')
   if (!token || !user) return null
-  if (user.role === 'etudiant') return '/student/clubs'
-  if (user.role === 'organisateur') return '/organiser'
+  if (user.role === 'etudiant') return '/student/events'
+  if (user.role === 'organisateur') return '/organiser/dashboard'
   return '/'
 }
 
@@ -55,9 +55,9 @@ function Login() {
       localStorage.setItem('user', JSON.stringify(user))
 
       if (user.role === 'etudiant') {
-        navigate('/student/clubs')
+        navigate('/student/events')
       } else if (user.role === 'organisateur') {
-        navigate('/organiser')
+        navigate('/organiser/dashboard')
       } else {
         navigate('/')
       }

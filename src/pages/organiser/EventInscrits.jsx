@@ -145,6 +145,8 @@ function Sidebar({ navigate, s }) {
       <div style={s.navItem} onClick={() => navigate('/organiser/club')}>🏛️ Mon club</div>
       <div style={s.navActive}>📅 Mes événements</div>
       <div style={s.navItem} onClick={() => navigate('/organiser/membres')}>👥 Membres</div>
+      <div className="messaging-nav-item" onClick={() => navigate('/organiser/messages')}>✉️ Messages</div>
+
     </div>
   )
 }

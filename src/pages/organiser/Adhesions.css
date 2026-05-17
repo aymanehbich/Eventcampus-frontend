@@ -8,6 +8,7 @@
 .adhesions-sidebar {
   background: #1A1A2E;
   padding: 24px 0;
+  position: relative;
 }
 
 .adhesions-logo {
