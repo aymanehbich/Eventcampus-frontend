@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { logout } from '../../api/auth'
 import { getUsers, getPendingUsers, activateUser, deactivateUser, activateRole, getPendingClubs, getValidatedClubs, getSuspendedClubs, approveClub, rejectClub, suspendClub, reactivateClub, deleteClub } from '../../api/admin'
+import StatisticsSection from './StatisticsSection'
+
 
 function AdminDashboard() {
   const navigate = useNavigate()
@@ -270,38 +272,8 @@ function AdminDashboard() {
         </div>
 
         {/* Statistics Section */}
-        {activeSection === 'statistics' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-            <div style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '24px', textAlign: 'center', transition: 'transform 0.2s' }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '32px', fontWeight: 700, color: '#1A1A2E', marginBottom: '8px' }}>{stats.totalUsers}</div>
-              <div style={{ fontSize: '13px', color: '#7A7A8C', fontWeight: 500 }}>Utilisateurs totaux</div>
-            </div>
-            <div style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '24px', textAlign: 'center', transition: 'transform 0.2s' }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '32px', fontWeight: 700, color: '#1A1A2E', marginBottom: '8px' }}>{stats.totalEvents}</div>
-              <div style={{ fontSize: '13px', color: '#7A7A8C', fontWeight: 500 }}>Événements</div>
-            </div>
-            <div style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '24px', textAlign: 'center', transition: 'transform 0.2s' }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '32px', fontWeight: 700, color: '#1A1A2E', marginBottom: '8px' }}>{stats.totalClubs}</div>
-              <div style={{ fontSize: '13px', color: '#7A7A8C', fontWeight: 500 }}>Clubs</div>
-            </div>
-            <div style={{ background: 'white', border: '1.5px solid #E94560', borderRadius: '10px', padding: '24px', textAlign: 'center', backgroundColor: 'rgba(233,69,96,0.08)', transition: 'transform 0.2s' }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '32px', fontWeight: 700, color: '#E94560', marginBottom: '8px' }}>{stats.pendingValidations}</div>
-              <div style={{ fontSize: '13px', color: '#E94560', fontWeight: 500 }}>Validations en attente</div>
-            </div>
-          </div>
-        )}
+        {activeSection === 'statistics' && <StatisticsSection />}
+
 
         {/* Users Section */}
         {activeSection === 'users' && (
