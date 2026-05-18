@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { logout } from '../../api/auth'
-import { getUsers, getPendingUsers, activateUser, deactivateUser, activateRole, getPendingClubs, getValidatedClubs, getSuspendedClubs, approveClub, rejectClub, suspendClub, reactivateClub } from '../../api/admin'
+import { getUsers, getPendingUsers, activateUser, deactivateUser, activateRole, getPendingClubs, getValidatedClubs, getSuspendedClubs, approveClub, rejectClub, suspendClub, reactivateClub, deleteClub } from '../../api/admin'
 
 function AdminDashboard() {
   const navigate = useNavigate()
@@ -157,6 +157,19 @@ function AdminDashboard() {
       fetchValidatedClubs()
     } catch {
       setClubMsg({ type: 'error', text: 'Erreur lors de la réactivation.' })
+    }
+  }
+
+  const handleDeleteClub = async (clubId, clubNom) => {
+    if (!window.confirm(`Supprimer définitivement le club "${clubNom}" ?`)) return
+    try {
+      await deleteClub(clubId)
+      setClubMsg({ type: 'success', text: 'Club supprimé avec succès.' })
+      fetchPendingClubs()
+      fetchValidatedClubs()
+      fetchSuspendedClubs()
+    } catch {
+      setClubMsg({ type: 'error', text: 'Erreur lors de la suppression.' })
     }
   }
 
@@ -559,6 +572,14 @@ function AdminDashboard() {
                         >
                           ✕ Rejeter
                         </button>
+                        <button
+                          onClick={() => handleDeleteClub(club.id, club.nom)}
+                          style={{ background: '#1A1A2E', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                          onMouseEnter={(e) => e.target.style.opacity = '0.75'}
+                          onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        >
+                          🗑 Supprimer
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -595,6 +616,14 @@ function AdminDashboard() {
                         >
                           ⏸ Suspendre
                         </button>
+                        <button
+                          onClick={() => handleDeleteClub(club.id, club.nom)}
+                          style={{ background: '#1A1A2E', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                          onMouseEnter={(e) => e.target.style.opacity = '0.75'}
+                          onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        >
+                          🗑 Supprimer
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -630,6 +659,14 @@ function AdminDashboard() {
                           onMouseLeave={(e) => e.target.style.opacity = '1'}
                         >
                           ▶ Réactiver
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClub(club.id, club.nom)}
+                          style={{ background: '#1A1A2E', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                          onMouseEnter={(e) => e.target.style.opacity = '0.75'}
+                          onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        >
+                          🗑 Supprimer
                         </button>
                       </div>
                     </div>
