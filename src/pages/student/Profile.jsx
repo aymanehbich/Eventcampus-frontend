@@ -15,6 +15,10 @@ function Profile() {
   const [user, setUser] = useState(null)
   const [activeTab, setActiveTab] = useState('Préférences')
   const [emailReminders, setEmailReminders] = useState(true)
+  const [whatsappReminders, setWhatsappReminders] = useState(false)
+  const [whatsappLoading, setWhatsappLoading] = useState(false)
+  const [whatsappMessage, setWhatsappMessage] = useState(null)
+  const [whatsappError, setWhatsappError] = useState(null)
   const [phone, setPhone] = useState('')
   const [phoneMessage, setPhoneMessage] = useState(null)
   const [phoneError, setPhoneError] = useState(null)
@@ -66,8 +70,30 @@ function Profile() {
         setEmailReminders(parsed.email_reminders)
       }
       if (parsed.phone) setPhone(parsed.phone)
+      if (parsed.whatsapp_reminders !== undefined) setWhatsappReminders(!!parsed.whatsapp_reminders)
     }
   }, [])
+
+  const handleToggleWhatsapp = async () => {
+    const newValue = !whatsappReminders
+    setWhatsappLoading(true)
+    setWhatsappMessage(null)
+    setWhatsappError(null)
+    try {
+      await updatePhone({ phone, whatsapp_reminders: newValue })
+      setWhatsappReminders(newValue)
+      const stored = localStorage.getItem('user')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        localStorage.setItem('user', JSON.stringify({ ...parsed, whatsapp_reminders: newValue }))
+      }
+      setWhatsappMessage(newValue ? 'Rappels WhatsApp activés.' : 'Rappels WhatsApp désactivés.')
+    } catch {
+      setWhatsappError('Une erreur est survenue. Veuillez réessayer.')
+    } finally {
+      setWhatsappLoading(false)
+    }
+  }
 
   const handleSavePhone = async () => {
     setPhoneLoading(true)
@@ -155,6 +181,11 @@ function Profile() {
             phoneLoading={phoneLoading}
             phoneMessage={phoneMessage}
             phoneError={phoneError}
+            whatsappReminders={whatsappReminders}
+            whatsappLoading={whatsappLoading}
+            whatsappMessage={whatsappMessage}
+            whatsappError={whatsappError}
+            onToggleWhatsapp={handleToggleWhatsapp}
             calendarConnected={calendarConnected}
             calendarMsg={calendarMsg}
             onCalendarConnect={async () => {
@@ -540,7 +571,7 @@ function NotificationsTab() {
   )
 }
 
-function PreferencesTab({ emailReminders, loading, message, error, onToggle, phone, onPhoneChange, onSavePhone, phoneLoading, phoneMessage, phoneError, calendarConnected, calendarMsg, onCalendarConnect, onCalendarDisconnect }) {
+function PreferencesTab({ emailReminders, loading, message, error, onToggle, phone, onPhoneChange, onSavePhone, phoneLoading, phoneMessage, phoneError, whatsappReminders, whatsappLoading, whatsappMessage, whatsappError, onToggleWhatsapp, calendarConnected, calendarMsg, onCalendarConnect, onCalendarDisconnect }) {
   return (
     <>
       <div className="section-header"><h3>Coordonnées</h3></div>
@@ -606,6 +637,25 @@ function PreferencesTab({ emailReminders, loading, message, error, onToggle, pho
 
       {message && <div className="profile-msg profile-msg--success">{message}</div>}
       {error && <div className="profile-msg profile-msg--error">{error}</div>}
+
+      <div className="notif-card" style={{ marginTop: '12px' }}>
+        <div className="notif-card-title">💬 Rappels WhatsApp</div>
+        <div className="toggle-row">
+          <div>
+            <div className="toggle-label">Recevoir les rappels d'événements par WhatsApp</div>
+            <div className="toggle-sub">Un message WhatsApp est envoyé la veille (J-1) de chaque événement auquel vous êtes inscrit</div>
+          </div>
+          <button
+            className={`toggle${whatsappReminders ? '' : ' off'}`}
+            onClick={onToggleWhatsapp}
+            disabled={whatsappLoading}
+            aria-pressed={whatsappReminders}
+            aria-label="Activer ou désactiver les rappels WhatsApp"
+          />
+        </div>
+        {whatsappMessage && <div className="profile-msg profile-msg--success" style={{ marginTop: '8px' }}>{whatsappMessage}</div>}
+        {whatsappError && <div className="profile-msg profile-msg--error" style={{ marginTop: '8px' }}>{whatsappError}</div>}
+      </div>
 
       {/* ── Google Agenda ── */}
       <div className="section-header" style={{ marginTop: '28px' }}><h3>Intégrations</h3></div>
