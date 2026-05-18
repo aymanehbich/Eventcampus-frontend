@@ -33,3 +33,6 @@ export const getPendingEvents  = () => api.get('/admin/events/pending')
 export const getAllEvents      = (params = {}) => api.get('/admin/events', { params })
 export const validateEvent     = (id) => api.put(`/admin/events/${id}/valider`)
 export const rejectEvent       = (id) => api.put(`/admin/events/${id}/refuser`)
+export const getStats = () => {
+return api.get('/admin/stats')
+}
