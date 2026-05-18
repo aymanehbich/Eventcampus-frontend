@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { logout } from '../../api/auth'
-import { getUsers, getPendingUsers, activateUser, deactivateUser, activateRole, getPendingClubs, getValidatedClubs, getSuspendedClubs, approveClub, rejectClub, suspendClub, reactivateClub, deleteClub } from '../../api/admin'
+import { getUsers, getPendingUsers, activateUser, deactivateUser, activateRole, getPendingClubs, getValidatedClubs, getSuspendedClubs, approveClub, rejectClub, suspendClub, reactivateClub, deleteClub, getPendingEvents, getAllEvents, validateEvent, rejectEvent } from '../../api/admin'
 
 function AdminDashboard() {
   const navigate = useNavigate()
@@ -23,6 +23,10 @@ function AdminDashboard() {
   const [suspendedClubs, setSuspendedClubs] = useState([])
   const [clubsTab, setClubsTab] = useState('pending')
   const [clubMsg, setClubMsg] = useState(null)
+  const [pendingEvents, setPendingEvents] = useState([])
+  const [allEvents, setAllEvents] = useState([])
+  const [eventsTab, setEventsTab] = useState('pending')
+  const [eventMsg, setEventMsg] = useState(null)
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterRole, setFilterRole] = useState('')
@@ -37,6 +41,9 @@ function AdminDashboard() {
       fetchPendingClubs()
       fetchValidatedClubs()
       fetchSuspendedClubs()
+    } else if (activeSection === 'events') {
+      fetchPendingEvents()
+      fetchAllEvents()
     }
   }, [activeSection, searchQuery, filterRole, filterStatus])
 
@@ -173,6 +180,62 @@ function AdminDashboard() {
     }
   }
 
+  const isPendingStatus = (statut) => {
+    if (!statut) return false
+    const s = statut.toString().toLowerCase().trim()
+    return s === 'en attente' || s === 'pending' || s === 'attente'
+  }
+
+  const fetchPendingEvents = async () => {
+    setLoading(true)
+    try {
+      const res = await getPendingEvents()
+      const data = res.data
+      const events = Array.isArray(data) ? data : (data.data || data.events || [])
+      setPendingEvents(events)
+    } catch (err) {
+      console.error('Error fetching pending events:', err)
+      setPendingEvents([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchAllEvents = async () => {
+    try {
+      const res = await getAllEvents()
+      const data = res.data
+      const events = Array.isArray(data) ? data : (data.data || data.events || [])
+      setAllEvents(events)
+    } catch (err) {
+      console.error('Error fetching all events:', err)
+    }
+  }
+
+  const handleValidateEvent = async (eventId) => {
+    try {
+      await validateEvent(eventId)
+      setEventMsg({ type: 'success', text: 'Événement validé avec succès.' })
+      fetchPendingEvents()
+      fetchAllEvents()
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Erreur lors de la validation.'
+      setEventMsg({ type: 'error', text: msg })
+    }
+  }
+
+  const handleRejectEvent = async (eventId) => {
+    try {
+      await rejectEvent(eventId)
+      setEventMsg({ type: 'warning', text: 'Événement rejeté.' })
+      fetchPendingEvents()
+      fetchAllEvents()
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Erreur lors du refus.'
+      setEventMsg({ type: 'error', text: msg })
+    }
+  }
+
   const handleActivateRole = async (userId, role) => {
     try {
       await activateRole(userId, role)
@@ -240,6 +303,12 @@ function AdminDashboard() {
           🏛️ Clubs
         </div>
         <div
+          style={activeSection === 'events' ? s.navActive : s.navItem}
+          onClick={() => setActiveSection('events')}
+        >
+          📅 Événements
+        </div>
+        <div
           style={activeSection === 'activity' ? s.navActive : s.navItem}
           onClick={() => setActiveSection('activity')}
         >
@@ -256,6 +325,7 @@ function AdminDashboard() {
               {activeSection === 'users' && '👥 Utilisateurs'}
               {activeSection === 'validation' && '✅ Validation des utilisateurs'}
               {activeSection === 'clubs' && '🏛️ Validation des clubs'}
+              {activeSection === 'events' && '📅 Validation des événements'}
               {activeSection === 'activity' && '📋 Activité récente'}
             </h2>
           </div>
@@ -673,6 +743,124 @@ function AdminDashboard() {
                   ))}
                 </div>
               )
+            )}
+          </div>
+        )}
+
+        {/* Events Validation Section */}
+        {activeSection === 'events' && (
+          <div>
+            {eventMsg && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '10px 16px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 500,
+                background: eventMsg.type === 'success' ? 'rgba(46,204,113,0.12)' : eventMsg.type === 'warning' ? 'rgba(255,149,0,0.12)' : 'rgba(233,69,96,0.10)',
+                color: eventMsg.type === 'success' ? '#1a7a47' : eventMsg.type === 'warning' ? '#b36a00' : '#E94560',
+              }}>
+                {eventMsg.text}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '4px', width: 'fit-content' }}>
+              <button
+                onClick={() => setEventsTab('pending')}
+                style={{ background: eventsTab === 'pending' ? '#1A1A2E' : 'transparent', color: eventsTab === 'pending' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+              >
+                ⏳ En attente {(pendingEvents.length > 0 ? pendingEvents : allEvents.filter(isPendingStatus)).length > 0 && `(${(pendingEvents.length > 0 ? pendingEvents : allEvents.filter(isPendingStatus)).length})`}
+              </button>
+              <button
+                onClick={() => setEventsTab('all')}
+                style={{ background: eventsTab === 'all' ? '#1A1A2E' : 'transparent', color: eventsTab === 'all' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+              >
+                📋 Tous {allEvents.length > 0 && `(${allEvents.length})`}
+              </button>
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
+            ) : eventsTab === 'pending' ? (
+              (() => {
+                const pendingList = pendingEvents.length > 0 ? pendingEvents : allEvents.filter(isPendingStatus)
+                if (pendingList.length === 0) {
+                  return <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun événement en attente de validation</div>
+                }
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {pendingList.map((event) => (
+                      <div key={event.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '32px', flexShrink: 0 }}>{event.club?.emoji || '📅'}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{event.titre}</div>
+                            <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.description}</div>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                              <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{event.categorie}</span>
+                              <span style={{ background: 'rgba(255,149,0,0.12)', color: '#b36a00', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>⏳ En attente</span>
+                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📅 {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}{event.heure ? ` · ${event.heure.substring(0, 5)}` : ''}</span>
+                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📍 {event.lieu || '—'}</span>
+                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>👥 {event.capacite_max} places</span>
+                              {event.club && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>🏛️ {event.club.nom}</span>}
+                              {event.club?.createur && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {event.club.createur.name}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                          <button onClick={() => handleValidateEvent(event.id)} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✓ Valider</button>
+                          <button onClick={() => handleRejectEvent(event.id)} style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✕ Refuser</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()
+            ) : allEvents.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun événement</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {allEvents.map((event) => {
+                  const isPending = isPendingStatus(event.statut)
+                  const sl = event.statut?.toString().toLowerCase().trim()
+                  const sc = {
+                    'validé': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Validé' },
+                    'valide': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Validé' },
+                    'accepté': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Accepté' },
+                    'accepte': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Accepté' },
+                    'en attente': { bg: 'rgba(255,149,0,0.12)', color: '#b36a00', label: '⏳ En attente' },
+                    'pending': { bg: 'rgba(255,149,0,0.12)', color: '#b36a00', label: '⏳ En attente' },
+                    'rejeté': { bg: 'rgba(233,69,96,0.10)', color: '#E94560', label: '❌ Rejeté' },
+                    'rejete': { bg: 'rgba(233,69,96,0.10)', color: '#E94560', label: '❌ Rejeté' },
+                  }[sl] || { bg: 'rgba(255,149,0,0.12)', color: '#b36a00', label: '⏳ En attente' }
+                  return (
+                    <div key={event.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '32px', flexShrink: 0 }}>{event.club?.emoji || '📅'}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{event.titre}</div>
+                          <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.description}</div>
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{event.categorie}</span>
+                            <span style={{ background: sc.bg, color: sc.color, padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{sc.label}</span>
+                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📅 {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}{event.heure ? ` · ${event.heure.substring(0, 5)}` : ''}</span>
+                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📍 {event.lieu || '—'}</span>
+                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>👥 {event.capacite_max} places</span>
+                            {event.club && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>🏛️ {event.club.nom}</span>}
+                            {event.club?.createur && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {event.club.createur.name}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      {isPending && (
+                        <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                          <button onClick={() => handleValidateEvent(event.id)} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✓ Valider</button>
+                          <button onClick={() => handleRejectEvent(event.id)} style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✕ Refuser</button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </div>
         )}
