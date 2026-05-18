@@ -20,6 +20,10 @@ export const activateRole = (userId, role) => {
   return api.put(`/users/${userId}/roles/${role}/activate`)
 }
 
-export const getPendingClubs = () => api.get('/admin/clubs/pending')
-export const approveClub     = (id) => api.put(`/admin/clubs/${id}/valider`)
-export const rejectClub      = (id) => api.put(`/admin/clubs/${id}/refuser`)
+export const getPendingClubs   = () => api.get('/admin/clubs/pending')
+export const getValidatedClubs = () => api.get('/admin/clubs/validated')
+export const getSuspendedClubs = () => api.get('/admin/clubs/suspended')
+export const approveClub       = (id) => api.put(`/admin/clubs/${id}/valider`)
+export const rejectClub        = (id) => api.put(`/admin/clubs/${id}/refuser`)
+export const suspendClub       = (id) => api.put(`/admin/clubs/${id}/suspendre`)
+export const reactivateClub    = (id) => api.put(`/admin/clubs/${id}/reactiver`)
