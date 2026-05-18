@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import { getClub, joinClub, leaveClub } from '../../api/clubs'
+import { startConversation } from '../../api/messages'
 
 const MEMBER_COLORS = ['#E94560', '#1A1A2E', '#4CAF50', '#FF9800', '#2196F3', '#9C27B0']
 
@@ -30,6 +31,7 @@ export default function ClubDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [joining, setJoining] = useState(false)
+  const [messaging, setMessaging] = useState(false)
 
   useEffect(() => { fetchClub() }, [id])
 
@@ -71,6 +73,29 @@ export default function ClubDetail() {
       }
     } finally {
       setJoining(false)
+    }
+  }
+
+  const handleMessageOrganizer = async () => {
+    const organizerId = club?.organizer?.id
+    if (!organizerId) {
+      alert('L\'identifiant de l\'organisateur n\'est pas disponible. Veuillez réessayer plus tard.')
+      return
+    }
+    setMessaging(true)
+    try {
+      await startConversation(organizerId)
+      navigate('/student/messages', {
+        state: {
+          organizerId,
+          organizerName: club.organizer.name,
+        },
+      })
+    } catch (err) {
+      console.error('Erreur lors du démarrage de la conversation', err)
+      alert('Impossible de démarrer la conversation avec l\'organisateur.')
+    } finally {
+      setMessaging(false)
     }
   }
 
@@ -137,31 +162,61 @@ export default function ClubDetail() {
           </div>
         </div>
 
-        <button
-          onClick={club.is_member ? handleJoinLeave : club.is_pending ? undefined : handleJoinLeave}
-          disabled={joining || club.is_pending}
-          style={{
-            padding: '14px 32px', borderRadius: '12px', fontSize: '14px',
-            fontWeight: 700,
-            cursor: joining ? 'wait' : club.is_pending ? 'default' : 'pointer',
-            fontFamily: "'DM Sans', sans-serif", flexShrink: 0,
-            background: club.is_member
-              ? 'transparent'
-              : club.is_pending
-                ? '#F4F4F6'
-                : 'linear-gradient(135deg, #E94560, #C0392B)',
-            color: club.is_member ? '#E94560' : club.is_pending ? '#7A7A8C' : 'white',
-            border: club.is_member
-              ? '2px solid #E94560'
-              : club.is_pending
-                ? '2px solid #E0E0E6'
-                : '2px solid transparent',
-            boxShadow: club.is_member || club.is_pending ? 'none' : '0 4px 14px rgba(233,69,96,0.4)',
-            transition: 'all 0.2s', opacity: joining ? 0.7 : 1,
-          }}
-        >
-          {joining ? '...' : club.is_member ? '✓ Membre' : club.is_pending ? '⏳ Demande en attente' : 'Rejoindre ce club'}
-        </button>
+        <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
+          <button
+            onClick={handleMessageOrganizer}
+            disabled={messaging}
+            style={{
+              padding: '14px 24px', borderRadius: '12px', fontSize: '14px',
+              fontWeight: 700,
+              cursor: messaging ? 'wait' : 'pointer',
+              fontFamily: "'DM Sans', sans-serif",
+              background: 'white',
+              color: '#1A1A2E',
+              border: '2px solid #E0E0E6',
+              transition: 'all 0.2s', opacity: messaging ? 0.7 : 1,
+            }}
+            onMouseEnter={e => {
+              if (!messaging) {
+                e.currentTarget.style.background = '#1A1A2E'
+                e.currentTarget.style.color = 'white'
+                e.currentTarget.style.borderColor = '#1A1A2E'
+              }
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'white'
+              e.currentTarget.style.color = '#1A1A2E'
+              e.currentTarget.style.borderColor = '#E0E0E6'
+            }}
+          >
+            {messaging ? '...' : '✉️ Contacter'}
+          </button>
+          <button
+            onClick={club.is_member ? handleJoinLeave : club.is_pending ? undefined : handleJoinLeave}
+            disabled={joining || club.is_pending}
+            style={{
+              padding: '14px 32px', borderRadius: '12px', fontSize: '14px',
+              fontWeight: 700,
+              cursor: joining ? 'wait' : club.is_pending ? 'default' : 'pointer',
+              fontFamily: "'DM Sans', sans-serif", flexShrink: 0,
+              background: club.is_member
+                ? 'transparent'
+                : club.is_pending
+                  ? '#F4F4F6'
+                  : 'linear-gradient(135deg, #E94560, #C0392B)',
+              color: club.is_member ? '#E94560' : club.is_pending ? '#7A7A8C' : 'white',
+              border: club.is_member
+                ? '2px solid #E94560'
+                : club.is_pending
+                  ? '2px solid #E0E0E6'
+                  : '2px solid transparent',
+              boxShadow: club.is_member || club.is_pending ? 'none' : '0 4px 14px rgba(233,69,96,0.4)',
+              transition: 'all 0.2s', opacity: joining ? 0.7 : 1,
+            }}
+          >
+            {joining ? '...' : club.is_member ? '✓ Membre' : club.is_pending ? '⏳ Demande en attente' : 'Rejoindre ce club'}
+          </button>
+        </div>
       </div>
 
       {/* ── Body ── */}

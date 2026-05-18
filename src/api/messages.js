@@ -1,5 +1,8 @@
 import api from './axios'
 
+export const startConversation = (memberId) =>
+  api.post(`/messages/start/${memberId}`)
+
 export const getConversations = (type = 'individuel') =>
   api.get('/messages/conversations', { params: { type } })
 
