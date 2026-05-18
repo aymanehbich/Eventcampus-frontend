@@ -309,8 +309,8 @@ function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((usr, i) => {
-                      const isLast = i === users.length - 1
+                    {users.filter(usr => usr.id !== user.id).map((usr, i, arr) => {
+                      const isLast = i === arr.length - 1
                       const tdStyle = { padding: '13px 16px', borderBottom: isLast ? 'none' : '1px solid #E0E0E6', color: '#1A1A2E', verticalAlign: 'middle' }
                       const isBanned = usr.role === 'banni'
                       const roleColor = usr.role === 'etudiant' ? { bg: '#EEF0FF', color: '#4A4AE8' } : usr.role === 'organisateur' ? { bg: '#FFF4E6', color: '#FF9500' } : usr.role === 'banni' ? { bg: '#FFE6E6', color: '#E94560' } : { bg: '#E6FFE6', color: '#4CAF50' }
@@ -334,7 +334,7 @@ function AdminDashboard() {
                           <td style={tdStyle}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               <div>
-                                {isBanned ? (
+                                {usr.role !== 'admin' && (isBanned ? (
                                   <button
                                     onClick={() => handleActivateUser(usr.id)}
                                     style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
@@ -352,7 +352,7 @@ function AdminDashboard() {
                                   >
                                     ✕ Désactiver
                                   </button>
-                                )}
+                                ))}
                               </div>
                               <div style={{ display: 'flex', gap: '6px' }}>
                                 {usr.role !== 'etudiant' && (
