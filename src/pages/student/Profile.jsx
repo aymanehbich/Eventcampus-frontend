@@ -426,6 +426,7 @@ function ClubsTab() {
 }
 
 function MessagesTab() {
+  const navigate = useNavigate()
   const [receivedMessages, setReceivedMessages] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -447,6 +448,7 @@ function MessagesTab() {
         content: msg.content,
         created_at: msg.created_at,
         read_at: msg.is_read ? msg.created_at : null,
+        sender_id: msg.sender?.id,
 
         sender_name:
           msg.sender?.name ||
@@ -467,6 +469,26 @@ function MessagesTab() {
 
   fetchMessages()
 }, [])
+
+  const handleReply = async (msg) => {
+    if (!msg.sender_id) {
+      alert('Impossible de répondre à ce message.')
+      return
+    }
+    try {
+      const { startConversation } = await import('../../api/messages')
+      await startConversation(msg.sender_id)
+      navigate('/student/messages', {
+        state: {
+          organizerId: msg.sender_id,
+          organizerName: msg.sender_name,
+        },
+      })
+    } catch (err) {
+      console.error('Erreur lors du démarrage de la conversation', err)
+      alert('Impossible de démarrer la conversation.')
+    }
+  }
 
   const formatDate = (d) =>
     new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -507,7 +529,7 @@ function MessagesTab() {
               <div className="msg-club-icon" style={{ background: getCategoryColor(msg.club_category) }}>
                 {getCategoryEmoji(msg.club_category)}
               </div>
-              <div className="msg-body">
+              <div className="msg-body" onClick={() => handleReply(msg)} style={{ cursor: 'pointer' }}>
 <div className="msg-club">
   {msg.sender_name || 'Organisateur'}
 </div>                <div className="msg-subject">{msg.subject || msg.content?.substring(0, 50)}</div>
@@ -516,6 +538,16 @@ function MessagesTab() {
               <div className="msg-meta">
                 <div className="msg-date">{formatDate(msg.sent_at || msg.created_at)}</div>
                 {!msg.read_at && <div className="unread-dot" />}
+                <button
+                  className="btn-ghost"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleReply(msg)
+                  }}
+                  style={{ fontSize: '11px', padding: '3px 10px' }}
+                >
+                  Répondre
+                </button>
               </div>
             </div>
           ))}

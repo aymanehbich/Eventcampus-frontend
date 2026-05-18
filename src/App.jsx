@@ -9,6 +9,7 @@ import Profile from './pages/student/Profile'
 import CreateClub from './pages/organiser/CreateClub'
 import Clubs from './pages/student/Clubs'
 import ClubDetail from './pages/student/ClubDetail'
+import StudentMessaging from './pages/student/StudentMessaging'
 import Events from './pages/student/Events'
 import EventDetail from './pages/student/EventDetail'
 import EventInscrits from './pages/organiser/EventInscrits'
@@ -83,6 +84,14 @@ function App() {
             <ProtectedRoute role="etudiant">
               <ClubDetail />
 
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/messages"
+          element={
+            <ProtectedRoute role="etudiant">
+              <StudentMessaging />
             </ProtectedRoute>
           }
         />

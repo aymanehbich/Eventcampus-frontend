@@ -55,6 +55,17 @@ export default function Navbar() {
         >
           Clubs
         </Link>
+        <Link
+          to="/student/messages"
+          style={{
+            textDecoration: 'none', fontSize: '14px', fontWeight: 500,
+            color: location.pathname.includes('/messages') ? '#1A1A2E' : '#7A7A8C',
+            borderBottom: location.pathname.includes('/messages') ? '2px solid #E94560' : 'none',
+            paddingBottom: '2px',
+          }}
+        >
+          Messages
+        </Link>
       </div>
 
       <div ref={dropdownRef} style={{ position: 'relative' }}>
@@ -93,6 +104,13 @@ export default function Navbar() {
               style={menuItemStyle}
             >
               👤 Mon profil
+            </button>
+
+            <button
+              onClick={() => { setOpen(false); navigate('/student/messages') }}
+              style={menuItemStyle}
+            >
+              ✉️ Messages
             </button>
 
             <button
