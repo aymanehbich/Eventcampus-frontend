@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { updatePreferences } from '../../api/auth'
+import { updatePreferences, updatePhone } from '../../api/auth'
 import { getClubs } from '../../api/clubs'
 import Navbar from '../../components/Navbar'
 import './Profile.css'
@@ -15,6 +15,10 @@ function Profile() {
   const [user, setUser] = useState(null)
   const [activeTab, setActiveTab] = useState('Préférences')
   const [emailReminders, setEmailReminders] = useState(true)
+  const [phone, setPhone] = useState('')
+  const [phoneMessage, setPhoneMessage] = useState(null)
+  const [phoneError, setPhoneError] = useState(null)
+  const [phoneLoading, setPhoneLoading] = useState(false)
   const [message, setMessage] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -61,8 +65,28 @@ function Profile() {
       if (parsed.email_reminders !== undefined) {
         setEmailReminders(parsed.email_reminders)
       }
+      if (parsed.phone) setPhone(parsed.phone)
     }
   }, [])
+
+  const handleSavePhone = async () => {
+    setPhoneLoading(true)
+    setPhoneMessage(null)
+    setPhoneError(null)
+    try {
+      const res = await updatePhone({ phone })
+      const stored = localStorage.getItem('user')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        localStorage.setItem('user', JSON.stringify({ ...parsed, phone: res.data.phone }))
+      }
+      setPhoneMessage('Numéro de téléphone enregistré.')
+    } catch {
+      setPhoneError('Une erreur est survenue. Veuillez réessayer.')
+    } finally {
+      setPhoneLoading(false)
+    }
+  }
 
   const handleToggle = async () => {
     const newValue = !emailReminders
@@ -125,6 +149,12 @@ function Profile() {
             message={message}
             error={error}
             onToggle={handleToggle}
+            phone={phone}
+            onPhoneChange={setPhone}
+            onSavePhone={handleSavePhone}
+            phoneLoading={phoneLoading}
+            phoneMessage={phoneMessage}
+            phoneError={phoneError}
             calendarConnected={calendarConnected}
             calendarMsg={calendarMsg}
             onCalendarConnect={async () => {
@@ -510,10 +540,35 @@ function NotificationsTab() {
   )
 }
 
-function PreferencesTab({ emailReminders, loading, message, error, onToggle, calendarConnected, calendarMsg, onCalendarConnect, onCalendarDisconnect }) {
+function PreferencesTab({ emailReminders, loading, message, error, onToggle, phone, onPhoneChange, onSavePhone, phoneLoading, phoneMessage, phoneError, calendarConnected, calendarMsg, onCalendarConnect, onCalendarDisconnect }) {
   return (
     <>
-      <div className="section-header"><h3>Préférences de notifications</h3></div>
+      <div className="section-header"><h3>Coordonnées</h3></div>
+      <div className="notif-card">
+        <div className="notif-card-title">📱 Numéro de téléphone</div>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '12px' }}>
+          <input
+            type="tel"
+            placeholder="+212620080504"
+            value={phone}
+            onChange={(e) => onPhoneChange(e.target.value)}
+            style={{ flex: 1, border: '1.5px solid #E0E0E6', borderRadius: '8px', padding: '9px 12px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
+            onFocus={(e) => e.target.style.borderColor = '#E94560'}
+            onBlur={(e) => e.target.style.borderColor = '#E0E0E6'}
+          />
+          <button
+            onClick={onSavePhone}
+            disabled={phoneLoading}
+            style={{ background: '#E94560', color: 'white', border: 'none', borderRadius: '8px', padding: '9px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}
+          >
+            {phoneLoading ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+        </div>
+        {phoneMessage && <div className="profile-msg profile-msg--success" style={{ marginTop: '8px' }}>{phoneMessage}</div>}
+        {phoneError && <div className="profile-msg profile-msg--error" style={{ marginTop: '8px' }}>{phoneError}</div>}
+      </div>
+
+      <div className="section-header" style={{ marginTop: '28px' }}><h3>Préférences de notifications</h3></div>
       <div className="notif-card">
         <div className="notif-card-title">🔔 Notifications par email</div>
 
