@@ -2,9 +2,17 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getOrganizerClubs, getPendingAdhesions, getClubUser, accepterAdhesion, refuserAdhesion } from '../../api/clubs'
 import { getOrganizerEvents } from '../../api/events'
+import api from '../../api/axios'
+
 
 export default function OrganizerDashboard() {
   const navigate = useNavigate()
+
+
+  const [notifications, setNotifications] = useState([])
+  const [showNotifs, setShowNotifs]       = useState(false)
+  const unreadCount = notifications.filter(n => !n.read_at).length
+
 
   const [clubs, setClubs] = useState([])
   const [events, setEvents] = useState([])
@@ -19,12 +27,14 @@ export default function OrganizerDashboard() {
   const today = new Date()
   const dateLabel = today.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
+
   useEffect(() => {
     Promise.all([
       getOrganizerClubs(),
       getOrganizerEvents(),
       getPendingAdhesions(),
       getClubUser(),
+      api.get('/notifications'),
     ]).then(([clubsRes, eventsRes, demandesRes, membresRes]) => {
       setClubs(Array.isArray(clubsRes.data) ? clubsRes.data : [])
       setEvents(Array.isArray(eventsRes.data) ? eventsRes.data : [])
@@ -116,7 +126,87 @@ export default function OrganizerDashboard() {
             </h2>
             <div style={{ fontSize: '13px', color: '#7A7A8C', marginTop: '4px', textTransform: 'capitalize' }}>{dateLabel}</div>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
+
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+
+            {/* 🔔 Cloche notifications */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowNotifs(prev => !prev)}
+                style={{
+                  width: '40px', height: '40px', borderRadius: '10px',
+                  border: '1.5px solid #E0E0E6', background: 'white',
+                  cursor: 'pointer', fontSize: '18px', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', position: 'relative',
+                }}
+              >
+                🔔
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '-6px', right: '-6px',
+                    background: '#E94560', color: 'white', fontSize: '10px',
+                    fontWeight: 700, width: '18px', height: '18px', borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Dropdown notifications */}
+              {showNotifs && (
+                <div style={{
+                  position: 'absolute', top: '48px', right: 0, width: '320px',
+                  background: 'white', borderRadius: '12px', border: '1.5px solid #E0E0E6',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 100, overflow: 'hidden',
+                }}>
+                  <div style={{
+                    padding: '14px 16px', borderBottom: '1px solid #F0F0F4',
+                    fontSize: '13px', fontWeight: 700, color: '#1A1A2E',
+                  }}>
+                    🔔 Notifications
+                  </div>
+
+                  {notifications.length === 0 ? (
+                    <div style={{ padding: '28px', textAlign: 'center', color: '#7A7A8C', fontSize: '13px' }}>
+                      Aucune notification
+                    </div>
+                  ) : (
+                    <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
+                      {notifications.map((notif, i) => {
+                        const data = notif.data || {}
+                        const isApproved = data.status === 'approved'
+                        const isUnread = !notif.read_at
+                        return (
+                          <div key={notif.id} style={{
+                            padding: '14px 16px',
+                            borderBottom: i < notifications.length - 1 ? '1px solid #F0F0F4' : 'none',
+                            background: isUnread ? 'rgba(233,69,96,0.04)' : 'white',
+                            display: 'flex', gap: '12px', alignItems: 'flex-start',
+                          }}>
+                            <div style={{ fontSize: '20px', flexShrink: 0 }}>
+                              {isApproved ? '✅' : '❌'}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: isUnread ? 600 : 400, color: '#1A1A2E', marginBottom: '3px' }}>
+                                {data.message || 'Notification'}
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#7A7A8C' }}>
+                                {notif.created_at ? new Date(notif.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                              </div>
+                            </div>
+                            {isUnread && (
+                              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#E94560', flexShrink: 0, marginTop: '4px' }} />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => navigate('/organiser/clubs/create')}
               style={{ background: 'white', border: '1.5px solid #E0E0E6', color: '#1A1A2E', borderRadius: '10px', padding: '10px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
