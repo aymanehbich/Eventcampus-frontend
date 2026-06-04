@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { logout } from '../../api/auth'
-import { getUsers, getPendingUsers, activateUser, deactivateUser, activateRole } from '../../api/admin'
+import { getUsers, getPendingUsers, activateUser, deactivateUser, activateRole, getPendingClubs, getValidatedClubs, getSuspendedClubs, approveClub, rejectClub, suspendClub, reactivateClub, deleteClub, getPendingEvents, getAllEvents, validateEvent, rejectEvent } from '../../api/admin'
+import StatisticsSection from './StatisticsSection'
 import RoleRequestsSection from './RoleRequestsSection'
+
 
 function AdminDashboard() {
   const navigate = useNavigate()
@@ -19,6 +21,15 @@ function AdminDashboard() {
 
   const [users, setUsers] = useState([])
   const [pendingUsers, setPendingUsers] = useState([])
+  const [pendingClubs, setPendingClubs] = useState([])
+  const [validatedClubs, setValidatedClubs] = useState([])
+  const [suspendedClubs, setSuspendedClubs] = useState([])
+  const [clubsTab, setClubsTab] = useState('pending')
+  const [clubMsg, setClubMsg] = useState(null)
+  const [pendingEvents, setPendingEvents] = useState([])
+  const [allEvents, setAllEvents] = useState([])
+  const [eventsTab, setEventsTab] = useState('pending')
+  const [eventMsg, setEventMsg] = useState(null)
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterRole, setFilterRole] = useState('')
@@ -29,6 +40,13 @@ function AdminDashboard() {
       fetchUsers()
     } else if (activeSection === 'validation') {
       fetchPendingUsers()
+    } else if (activeSection === 'clubs') {
+      fetchPendingClubs()
+      fetchValidatedClubs()
+      fetchSuspendedClubs()
+    } else if (activeSection === 'events') {
+      fetchPendingEvents()
+      fetchAllEvents()
     }
   }, [activeSection, searchQuery, filterRole, filterStatus])
 
@@ -38,7 +56,7 @@ function AdminDashboard() {
       const params = {}
       if (searchQuery) params.search = searchQuery
       if (filterRole) params.role = filterRole
-      if (filterStatus) params.status = filterStatus
+      if (filterStatus) params.role = filterStatus
       const res = await getUsers(params)
       setUsers(Array.isArray(res.data.data) ? res.data.data : res.data.data || [])
     } catch (err) {
@@ -61,22 +79,165 @@ function AdminDashboard() {
   }
 
   const handleActivateUser = async (userId) => {
+  try {
+    await activateUser(userId)
+    alert('Utilisateur activé avec succès')
+    fetchUsers()
+    fetchPendingUsers() // ← add this
+  } catch (err) {
+    alert("Erreur lors de l'activation")
+  }
+}
+
+const handleDeactivateUser = async (userId) => {
+  try {
+    await deactivateUser(userId)
+    alert('Utilisateur désactivé avec succès')
+    fetchUsers()
+    fetchPendingUsers() // ← add this
+  } catch (err) {
+    alert("Erreur lors de la désactivation")
+  }
+}
+
+  const fetchPendingClubs = async () => {
+    setLoading(true)
     try {
-      await activateUser(userId)
-      alert('Utilisateur activé avec succès')
-      fetchUsers()
+      const res = await getPendingClubs()
+      setPendingClubs(Array.isArray(res.data) ? res.data : [])
     } catch (err) {
-      alert('Erreur lors de l\'activation')
+      console.error('Error fetching pending clubs:', err)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleDeactivateUser = async (userId) => {
+  const handleApproveClub = async (clubId) => {
     try {
-      await deactivateUser(userId)
-      alert('Utilisateur désactivé avec succès')
-      fetchUsers()
+      await approveClub(clubId)
+      setClubMsg({ type: 'success', text: 'Club approuvé avec succès.' })
+      fetchPendingClubs()
+    } catch {
+      setClubMsg({ type: 'error', text: "Erreur lors de l'approbation." })
+    }
+  }
+
+  const handleRejectClub = async (clubId) => {
+    try {
+      await rejectClub(clubId)
+      setClubMsg({ type: 'error', text: 'Club rejeté.' })
+      fetchPendingClubs()
+    } catch {
+      setClubMsg({ type: 'error', text: 'Erreur lors du refus.' })
+    }
+  }
+
+  const fetchValidatedClubs = async () => {
+    try {
+      const res = await getValidatedClubs()
+      setValidatedClubs(Array.isArray(res.data) ? res.data : [])
     } catch (err) {
-      alert('Erreur lors de la désactivation')
+      console.error('Error fetching validated clubs:', err)
+    }
+  }
+
+  const handleSuspendClub = async (clubId) => {
+    try {
+      await suspendClub(clubId)
+      setClubMsg({ type: 'warning', text: 'Club suspendu avec succès.' })
+      fetchValidatedClubs()
+      fetchSuspendedClubs()
+    } catch {
+      setClubMsg({ type: 'error', text: 'Erreur lors de la suspension.' })
+    }
+  }
+
+  const fetchSuspendedClubs = async () => {
+    try {
+      const res = await getSuspendedClubs()
+      setSuspendedClubs(Array.isArray(res.data) ? res.data : [])
+    } catch (err) {
+      console.error('Error fetching suspended clubs:', err)
+    }
+  }
+
+  const handleReactivateClub = async (clubId) => {
+    try {
+      await reactivateClub(clubId)
+      setClubMsg({ type: 'success', text: 'Club réactivé avec succès.' })
+      fetchSuspendedClubs()
+      fetchValidatedClubs()
+    } catch {
+      setClubMsg({ type: 'error', text: 'Erreur lors de la réactivation.' })
+    }
+  }
+
+  const handleDeleteClub = async (clubId, clubNom) => {
+    if (!window.confirm(`Supprimer définitivement le club "${clubNom}" ?`)) return
+    try {
+      await deleteClub(clubId)
+      setClubMsg({ type: 'success', text: 'Club supprimé avec succès.' })
+      fetchPendingClubs()
+      fetchValidatedClubs()
+      fetchSuspendedClubs()
+    } catch {
+      setClubMsg({ type: 'error', text: 'Erreur lors de la suppression.' })
+    }
+  }
+
+  const isPendingStatus = (statut) => {
+    if (!statut) return false
+    const s = statut.toString().toLowerCase().trim()
+    return s === 'en attente' || s === 'pending' || s === 'attente'
+  }
+
+  const fetchPendingEvents = async () => {
+    setLoading(true)
+    try {
+      const res = await getPendingEvents()
+      const data = res.data
+      const events = Array.isArray(data) ? data : (data.data || data.events || [])
+      setPendingEvents(events)
+    } catch (err) {
+      console.error('Error fetching pending events:', err)
+      setPendingEvents([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchAllEvents = async () => {
+    try {
+      const res = await getAllEvents()
+      const data = res.data
+      const events = Array.isArray(data) ? data : (data.data || data.events || [])
+      setAllEvents(events)
+    } catch (err) {
+      console.error('Error fetching all events:', err)
+    }
+  }
+
+  const handleValidateEvent = async (eventId) => {
+    try {
+      await validateEvent(eventId)
+      setEventMsg({ type: 'success', text: 'Événement validé avec succès.' })
+      fetchPendingEvents()
+      fetchAllEvents()
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Erreur lors de la validation.'
+      setEventMsg({ type: 'error', text: msg })
+    }
+  }
+
+  const handleRejectEvent = async (eventId) => {
+    try {
+      await rejectEvent(eventId)
+      setEventMsg({ type: 'warning', text: 'Événement rejeté.' })
+      fetchPendingEvents()
+      fetchAllEvents()
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Erreur lors du refus.'
+      setEventMsg({ type: 'error', text: msg })
     }
   }
 
@@ -134,9 +295,29 @@ function AdminDashboard() {
         >
           👥 Utilisateurs
         </div>
-        <div style={activeSection === 'validation' ? s.navActive : s.navItem}
-          onClick={() => setActiveSection('validation')}>
-          🏛️ Demandes de rôle  
+        <div
+          style={activeSection === 'validation' ? s.navActive : s.navItem}
+          onClick={() => setActiveSection('validation')}
+        >
+          ✅ Validations
+        </div>
+        <div
+          style={activeSection === 'clubs' ? s.navActive : s.navItem}
+          onClick={() => setActiveSection('clubs')}
+        >
+          🏛️ Clubs
+        </div>
+        <div
+          style={activeSection === 'events' ? s.navActive : s.navItem}
+          onClick={() => setActiveSection('events')}
+        >
+          📅 Événements
+        </div>
+        <div
+          style={activeSection === 'role-requests' ? s.navActive : s.navItem}
+          onClick={() => setActiveSection('role-requests')}
+        >
+          🔑 Demandes de rôle
         </div>
         <div
           style={activeSection === 'activity' ? s.navActive : s.navItem}
@@ -153,7 +334,10 @@ function AdminDashboard() {
             <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', color: '#1A1A2E' }}>
               {activeSection === 'statistics' && '📊 Statistiques'}
               {activeSection === 'users' && '👥 Utilisateurs'}
-              {activeSection === 'validation' && '🏛️ Demandes de rôle'}
+              {activeSection === 'validation' && '✅ Validation des utilisateurs'}
+              {activeSection === 'clubs' && '🏛️ Validation des clubs'}
+              {activeSection === 'events' && '📅 Validation des événements'}
+              {activeSection === 'role-requests' && '🔑 Demandes de rôle organisateur'}
               {activeSection === 'activity' && '📋 Activité récente'}
             </h2>
           </div>
@@ -168,38 +352,11 @@ function AdminDashboard() {
         </div>
 
         {/* Statistics Section */}
-        {activeSection === 'statistics' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-            <div style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '24px', textAlign: 'center', transition: 'transform 0.2s' }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '32px', fontWeight: 700, color: '#1A1A2E', marginBottom: '8px' }}>{stats.totalUsers}</div>
-              <div style={{ fontSize: '13px', color: '#7A7A8C', fontWeight: 500 }}>Utilisateurs totaux</div>
-            </div>
-            <div style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '24px', textAlign: 'center', transition: 'transform 0.2s' }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '32px', fontWeight: 700, color: '#1A1A2E', marginBottom: '8px' }}>{stats.totalEvents}</div>
-              <div style={{ fontSize: '13px', color: '#7A7A8C', fontWeight: 500 }}>Événements</div>
-            </div>
-            <div style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '24px', textAlign: 'center', transition: 'transform 0.2s' }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '32px', fontWeight: 700, color: '#1A1A2E', marginBottom: '8px' }}>{stats.totalClubs}</div>
-              <div style={{ fontSize: '13px', color: '#7A7A8C', fontWeight: 500 }}>Clubs</div>
-            </div>
-            <div style={{ background: 'white', border: '1.5px solid #E94560', borderRadius: '10px', padding: '24px', textAlign: 'center', backgroundColor: 'rgba(233,69,96,0.08)', transition: 'transform 0.2s' }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '32px', fontWeight: 700, color: '#E94560', marginBottom: '8px' }}>{stats.pendingValidations}</div>
-              <div style={{ fontSize: '13px', color: '#E94560', fontWeight: 500 }}>Validations en attente</div>
-            </div>
-          </div>
-        )}
+        {activeSection === 'statistics' && <StatisticsSection />}
+
+        {/* Role Requests Section */}
+        {activeSection === 'role-requests' && <RoleRequestsSection />}
+
 
         {/* Users Section */}
         {activeSection === 'users' && (
@@ -244,8 +401,7 @@ function AdminDashboard() {
                 >
                   <option value="">Tous les statuts</option>
                   <option value="actif">Actif</option>
-                  <option value="inactif">Inactif</option>
-                  <option value="suspendu">Suspendu</option>
+                  <option value="banni">Inactif / Banni</option>
                 </select>
               </div>
             </div>
@@ -266,11 +422,12 @@ function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((usr, i) => {
-                      const isLast = i === users.length - 1
+                    {users.filter(usr => usr.id !== user.id).map((usr, i, arr) => {
+                      const isLast = i === arr.length - 1
                       const tdStyle = { padding: '13px 16px', borderBottom: isLast ? 'none' : '1px solid #E0E0E6', color: '#1A1A2E', verticalAlign: 'middle' }
-                      const roleColor = usr.role === 'etudiant' ? { bg: '#EEF0FF', color: '#4A4AE8' } : usr.role === 'organisateur' ? { bg: '#FFF4E6', color: '#FF9500' } : { bg: '#E6FFE6', color: '#4CAF50' }
-                      const statusColor = usr.status === 'actif' || usr.status === 'active' ? { bg: '#E6FFE6', color: '#4CAF50' } : usr.status === 'inactif' || usr.status === 'inactive' ? { bg: '#FFE6E6', color: '#E94560' } : { bg: '#FFF4E6', color: '#FF9500' }
+                      const isBanned = usr.role === 'banni'
+                      const roleColor = usr.role === 'etudiant' ? { bg: '#EEF0FF', color: '#4A4AE8' } : usr.role === 'organisateur' ? { bg: '#FFF4E6', color: '#FF9500' } : usr.role === 'banni' ? { bg: '#FFE6E6', color: '#E94560' } : { bg: '#E6FFE6', color: '#4CAF50' }
+                      const statusColor = isBanned ? { bg: '#FFE6E6', color: '#E94560' } : { bg: '#E6FFE6', color: '#4CAF50' }
                       return (
                         <tr key={usr.id}>
                           <td style={tdStyle}>
@@ -279,18 +436,18 @@ function AdminDashboard() {
                           <td style={tdStyle}>{usr.email}</td>
                           <td style={tdStyle}>
                             <span style={{ background: roleColor.bg, color: roleColor.color, padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
-                              {usr.role === 'etudiant' ? '🎓 Étudiant' : usr.role === 'organisateur' ? '🏛️ Organisateur' : '⚙️ Admin'}
+                              {usr.role === 'etudiant' ? '🎓 Étudiant' : usr.role === 'organisateur' ? '🏛️ Organisateur' : usr.role === 'banni' ? '🚫 Banni' : '⚙️ Admin'}
                             </span>
                           </td>
                           <td style={tdStyle}>
                             <span style={{ background: statusColor.bg, color: statusColor.color, padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
-                              {usr.status === 'active' || usr.status === 'actif' ? '✅ Actif' : usr.status === 'inactive' || usr.status === 'inactif' ? '❌ Inactif' : '⏸️ Suspendu'}
+                              {isBanned ? '❌ Inactif' : '✅ Actif'}
                             </span>
                           </td>
                           <td style={tdStyle}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               <div>
-                                {(usr.status === 'inactive' || usr.status === 'inactif') ? (
+                                {usr.role !== 'admin' && (isBanned ? (
                                   <button
                                     onClick={() => handleActivateUser(usr.id)}
                                     style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
@@ -308,7 +465,7 @@ function AdminDashboard() {
                                   >
                                     ✕ Désactiver
                                   </button>
-                                )}
+                                ))}
                               </div>
                               <div style={{ display: 'flex', gap: '6px' }}>
                                 {usr.role !== 'etudiant' && (
@@ -345,8 +502,369 @@ function AdminDashboard() {
         )}
 
         {/* User Validation Section */}
-        {activeSection === 'validation' && <RoleRequestsSection />}
+        {activeSection === 'validation' && (
+          <div>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
+            ) : pendingUsers.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun utilisateur en attente de validation</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {pendingUsers.map((pendingUser) => {
+                  const isLast = pendingUsers[pendingUsers.length - 1].id === pendingUser.id
+                  return (
+                    <div key={pendingUser.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, color: '#1A1A2E', fontSize: '14px', marginBottom: '4px' }}>{pendingUser.name}</div>
+                        <div style={{ color: '#555', fontSize: '12px', marginBottom: '8px' }}>{pendingUser.email}</div>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          <span style={{ background: 'rgba(233,69,96,0.1)', color: '#E94560', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{pendingUser.role === 'etudiant' ? '🎓 Étudiant' : pendingUser.role === 'organisateur' ? '🏛️ Organisateur' : '⚙️ Admin'}</span>
+                          <span style={{ fontSize: '11px', color: '#7A7A8C' }}>{pendingUser.date}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await activateUser(pendingUser.id)
+                              alert('Utilisateur validé avec succès')
+                              fetchPendingUsers()
+                            } catch (err) {
+                              alert("Erreur lors de la validation")
+                            }
+                          }}
+                          style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                          onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        >
+                          ✓ Accepter
+                        </button>
+                        <button
+                            onClick={async () => {
+                            try {
+                              await deactivateUser(pendingUser.id)
+                              alert('Utilisateur refusé')
+                              fetchPendingUsers()
+                            } catch (err) {
+                              alert("Erreur lors du refus")
+                            }
+                          }}
+                          style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                          onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        >
+                          ✕ Refuser
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
+        {/* Clubs Validation Section */}
+        {activeSection === 'clubs' && (
+          <div>
+            {clubMsg && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '10px 16px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 500,
+                background: clubMsg.type === 'success' ? 'rgba(46,204,113,0.12)' : clubMsg.type === 'warning' ? 'rgba(255,149,0,0.12)' : 'rgba(233,69,96,0.10)',
+                color: clubMsg.type === 'success' ? '#1a7a47' : clubMsg.type === 'warning' ? '#b36a00' : '#E94560',
+              }}>
+                {clubMsg.text}
+              </div>
+            )}
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '4px', width: 'fit-content' }}>
+              <button
+                onClick={() => setClubsTab('pending')}
+                style={{ background: clubsTab === 'pending' ? '#1A1A2E' : 'transparent', color: clubsTab === 'pending' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+              >
+                ⏳ En attente {pendingClubs.length > 0 && `(${pendingClubs.length})`}
+              </button>
+              <button
+                onClick={() => setClubsTab('validated')}
+                style={{ background: clubsTab === 'validated' ? '#1A1A2E' : 'transparent', color: clubsTab === 'validated' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+              >
+                ✅ Validés {validatedClubs.length > 0 && `(${validatedClubs.length})`}
+              </button>
+              <button
+                onClick={() => setClubsTab('suspended')}
+                style={{ background: clubsTab === 'suspended' ? '#1A1A2E' : 'transparent', color: clubsTab === 'suspended' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+              >
+                ⏸ Suspendus {suspendedClubs.length > 0 && `(${suspendedClubs.length})`}
+              </button>
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
+            ) : clubsTab === 'pending' ? (
+              pendingClubs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun club en attente de validation</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {pendingClubs.map((club) => (
+                    <div key={club.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '32px', flexShrink: 0 }}>{club.emoji || '🏛️'}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{club.nom}</div>
+                          <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.description}</div>
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{club.categorie}</span>
+                            {club.createur && (
+                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {club.createur.name} ({club.createur.email})</span>
+                            )}
+                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>{new Date(club.created_at).toLocaleDateString('fr-FR')}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                        <button
+                          onClick={() => handleApproveClub(club.id)}
+                          style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                          onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        >
+                          ✓ Approuver
+                        </button>
+                        <button
+                          onClick={() => handleRejectClub(club.id)}
+                          style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                          onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        >
+                          ✕ Rejeter
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClub(club.id, club.nom)}
+                          style={{ background: '#1A1A2E', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                          onMouseEnter={(e) => e.target.style.opacity = '0.75'}
+                          onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        >
+                          🗑 Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : clubsTab === 'validated' ? (
+              validatedClubs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun club validé</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {validatedClubs.map((club) => (
+                    <div key={club.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '32px', flexShrink: 0 }}>{club.emoji || '🏛️'}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{club.nom}</div>
+                          <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.description}</div>
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{club.categorie}</span>
+                            <span style={{ background: 'rgba(46,204,113,0.12)', color: '#1a7a47', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>✅ Validé</span>
+                            {club.createur && (
+                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {club.createur.name} ({club.createur.email})</span>
+                            )}
+                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>{new Date(club.created_at).toLocaleDateString('fr-FR')}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                        <button
+                          onClick={() => handleSuspendClub(club.id)}
+                          style={{ background: '#FF9500', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                          onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        >
+                          ⏸ Suspendre
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClub(club.id, club.nom)}
+                          style={{ background: '#1A1A2E', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                          onMouseEnter={(e) => e.target.style.opacity = '0.75'}
+                          onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        >
+                          🗑 Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : (
+              suspendedClubs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun club suspendu</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {suspendedClubs.map((club) => (
+                    <div key={club.id} style={{ background: 'white', border: '1.5px solid #FFE0B2', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '32px', flexShrink: 0, opacity: 0.6 }}>{club.emoji || '🏛️'}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{club.nom}</div>
+                          <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.description}</div>
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{club.categorie}</span>
+                            <span style={{ background: 'rgba(255,149,0,0.12)', color: '#b36a00', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>⏸ Suspendu</span>
+                            {club.createur && (
+                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {club.createur.name} ({club.createur.email})</span>
+                            )}
+                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>{new Date(club.created_at).toLocaleDateString('fr-FR')}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                        <button
+                          onClick={() => handleReactivateClub(club.id)}
+                          style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                          onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        >
+                          ▶ Réactiver
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClub(club.id, club.nom)}
+                          style={{ background: '#1A1A2E', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
+                          onMouseEnter={(e) => e.target.style.opacity = '0.75'}
+                          onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        >
+                          🗑 Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        )}
+
+        {/* Events Validation Section */}
+        {activeSection === 'events' && (
+          <div>
+            {eventMsg && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '10px 16px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 500,
+                background: eventMsg.type === 'success' ? 'rgba(46,204,113,0.12)' : eventMsg.type === 'warning' ? 'rgba(255,149,0,0.12)' : 'rgba(233,69,96,0.10)',
+                color: eventMsg.type === 'success' ? '#1a7a47' : eventMsg.type === 'warning' ? '#b36a00' : '#E94560',
+              }}>
+                {eventMsg.text}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '4px', width: 'fit-content' }}>
+              <button
+                onClick={() => setEventsTab('pending')}
+                style={{ background: eventsTab === 'pending' ? '#1A1A2E' : 'transparent', color: eventsTab === 'pending' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+              >
+                ⏳ En attente {(pendingEvents.length > 0 ? pendingEvents : allEvents.filter(isPendingStatus)).length > 0 && `(${(pendingEvents.length > 0 ? pendingEvents : allEvents.filter(isPendingStatus)).length})`}
+              </button>
+              <button
+                onClick={() => setEventsTab('all')}
+                style={{ background: eventsTab === 'all' ? '#1A1A2E' : 'transparent', color: eventsTab === 'all' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+              >
+                📋 Tous {allEvents.length > 0 && `(${allEvents.length})`}
+              </button>
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
+            ) : eventsTab === 'pending' ? (
+              (() => {
+                const pendingList = pendingEvents.length > 0 ? pendingEvents : allEvents.filter(isPendingStatus)
+                if (pendingList.length === 0) {
+                  return <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun événement en attente de validation</div>
+                }
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {pendingList.map((event) => (
+                      <div key={event.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '32px', flexShrink: 0 }}>{event.club?.emoji || '📅'}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{event.titre}</div>
+                            <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.description}</div>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                              <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{event.categorie}</span>
+                              <span style={{ background: 'rgba(255,149,0,0.12)', color: '#b36a00', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>⏳ En attente</span>
+                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📅 {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}{event.heure ? ` · ${event.heure.substring(0, 5)}` : ''}</span>
+                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📍 {event.lieu || '—'}</span>
+                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>👥 {event.capacite_max} places</span>
+                              {event.club && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>🏛️ {event.club.nom}</span>}
+                              {event.club?.createur && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {event.club.createur.name}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                          <button onClick={() => handleValidateEvent(event.id)} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✓ Valider</button>
+                          <button onClick={() => handleRejectEvent(event.id)} style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✕ Refuser</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()
+            ) : allEvents.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun événement</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {allEvents.map((event) => {
+                  const isPending = isPendingStatus(event.statut)
+                  const sl = event.statut?.toString().toLowerCase().trim()
+                  const sc = {
+                    'validé': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Validé' },
+                    'valide': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Validé' },
+                    'accepté': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Accepté' },
+                    'accepte': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Accepté' },
+                    'en attente': { bg: 'rgba(255,149,0,0.12)', color: '#b36a00', label: '⏳ En attente' },
+                    'pending': { bg: 'rgba(255,149,0,0.12)', color: '#b36a00', label: '⏳ En attente' },
+                    'rejeté': { bg: 'rgba(233,69,96,0.10)', color: '#E94560', label: '❌ Rejeté' },
+                    'rejete': { bg: 'rgba(233,69,96,0.10)', color: '#E94560', label: '❌ Rejeté' },
+                  }[sl] || { bg: 'rgba(255,149,0,0.12)', color: '#b36a00', label: '⏳ En attente' }
+                  return (
+                    <div key={event.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '32px', flexShrink: 0 }}>{event.club?.emoji || '📅'}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{event.titre}</div>
+                          <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.description}</div>
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{event.categorie}</span>
+                            <span style={{ background: sc.bg, color: sc.color, padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{sc.label}</span>
+                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📅 {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}{event.heure ? ` · ${event.heure.substring(0, 5)}` : ''}</span>
+                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📍 {event.lieu || '—'}</span>
+                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>👥 {event.capacite_max} places</span>
+                            {event.club && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>🏛️ {event.club.nom}</span>}
+                            {event.club?.createur && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {event.club.createur.name}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      {isPending && (
+                        <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                          <button onClick={() => handleValidateEvent(event.id)} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✓ Valider</button>
+                          <button onClick={() => handleRejectEvent(event.id)} style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✕ Refuser</button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Activity Section */}
         {activeSection === 'activity' && (

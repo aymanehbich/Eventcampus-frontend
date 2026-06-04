@@ -53,7 +53,7 @@ function Register() {
     try {
       const payload = orgStep === 'exists'
         ? { name: orgEmail, email: orgEmail, student_id: orgData.student_id, is_existing_student: true }
-        : { name: `${orgData.prenom} ${orgData.nom}`, email: orgEmail, student_id: orgData.student_id, password: orgData.password, password_confirmation: orgData.password_confirmation, is_existing_student: false }
+        : { prenom: orgData.prenom, nom: orgData.nom, name: `${orgData.prenom} ${orgData.nom}`, email: orgEmail, student_id: orgData.student_id, password: orgData.password, password_confirmation: orgData.password_confirmation, is_existing_student: false }
       await submitRoleRequest(payload)
       setOrgStep('success')
     } catch (err) {
