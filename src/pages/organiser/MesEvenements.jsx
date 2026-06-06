@@ -156,19 +156,16 @@ export default function MesEvenements() {
                           <span style={{ color: '#7A7A8C' }}> / {totalPlaces}</span>
                         </td>
                         <td style={tdStyle}>
-                          {evt.statut === 'En attente' ? (
-                            <span style={{ background: '#FFF4E6', color: '#FF9500', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
-                              ⏱️ En attente
-                            </span>
-                          ) : evt.statut === 'Accepté' ? (
-                            <span style={{ background: '#E6FFE6', color: '#4CAF50', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
-                              ✅ Publié
-                            </span>
-                          ) : (
-                            <span style={{ background: '#FFE6E6', color: '#E94560', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
-                              ❌ Rejeté
-                            </span>
-                          )}
+                          {(() => {
+                            const st = evt.statut?.toString().toLowerCase().trim()
+                            if (st === 'en attente' || st === 'pending') {
+                              return <span style={{ background: '#FFF4E6', color: '#FF9500', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>⏱️ En attente</span>
+                            }
+                            if (st === 'accepté' || st === 'accepte' || st === 'validé' || st === 'valide') {
+                              return <span style={{ background: '#E6FFE6', color: '#4CAF50', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>✅ Publié</span>
+                            }
+                            return <span style={{ background: '#FFE6E6', color: '#E94560', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>❌ Rejeté</span>
+                          })()}
                         </td>
                         <td style={tdStyle}>
                           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

@@ -64,6 +64,8 @@ function Login() {
     } catch (err) {
       if (err.response?.status === 401) {
         setErrors({ general: ['Email ou mot de passe incorrect.'] })
+      } else if (err.response?.status === 403) {
+        setErrors({ general: [err.response.data.message || 'Votre compte a été désactivé.'] })
       } else if (err.response?.status === 422) {
         setErrors(err.response.data.errors || {})
       } else {

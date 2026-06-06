@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import { getEvent, registerEvent, unregisterEvent } from '../../api/events'
+import { addEventToCalendar } from '../../api/googleCalendar'
 
 const CATEGORY_COLORS = {
   Conférence: '#FFF0E6',
@@ -45,6 +46,10 @@ export default function EventDetail() {
   const [userState, setUserState] = useState(null) // 'registered' | 'waitlisted' | null
   const [waitlistPosition, setWaitlistPosition] = useState(null)
   const [waitlistTotal, setWaitlistTotal] = useState(null)
+  const [calendarMsg, setCalendarMsg] = useState(null) // { type: 'success'|'info', text: string }
+  const [addingToCalendar, setAddingToCalendar] = useState(false)
+  const [calendarAdded, setCalendarAdded] = useState(false)
+  const [calendarNotConnected, setCalendarNotConnected] = useState(false)
 
   useEffect(() => {
     fetchEvent()
@@ -60,6 +65,7 @@ export default function EventDetail() {
 
       if (eventData.is_registered) {
         setUserState('registered')
+        setCalendarAdded(eventData.calendar_added ?? false)
       } else if (eventData.is_waitlisted) {
         setUserState('waitlisted')
         setWaitlistPosition(eventData.waitlist_position ?? null)
@@ -67,6 +73,7 @@ export default function EventDetail() {
       } else {
         setUserState(null)
       }
+      return eventData
     } catch (err) {
       console.error(err)
       setError('Événement introuvable.')
@@ -110,6 +117,26 @@ export default function EventDetail() {
       alert('Une erreur est survenue.')
     } finally {
       setRegistering(false)
+    }
+  }
+
+  const handleAddToCalendar = async () => {
+    setAddingToCalendar(true)
+    setCalendarNotConnected(false)
+    try {
+      const res = await addEventToCalendar(id)
+      if (res.data.calendar_added) {
+        setCalendarAdded(true)
+        setCalendarMsg({ type: 'success', text: '📅 Ajouté à votre Google Agenda !' })
+      } else if (res.data.not_connected) {
+        setCalendarNotConnected(true)
+      } else {
+        setCalendarMsg({ type: 'error', text: "Impossible d'ajouter l'événement au calendrier." })
+      }
+    } catch {
+      setCalendarMsg({ type: 'error', text: "Impossible d'ajouter l'événement au calendrier." })
+    } finally {
+      setAddingToCalendar(false)
     }
   }
 
@@ -277,9 +304,59 @@ export default function EventDetail() {
                 </div>
 
                 {userState === 'registered' ? (
-                  <button onClick={handleUnregister} disabled={registering} style={{ width: '100%', background: 'linear-gradient(135deg, #2ECC71, #27AE60)', color: 'white', border: 'none', borderRadius: '12px', padding: '14px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginTop: '16px' }}>
-                    ✓ Inscrit (Annuler ?)
-                  </button>
+                  <>
+                    <button onClick={handleUnregister} disabled={registering} style={{ width: '100%', background: 'linear-gradient(135deg, #2ECC71, #27AE60)', color: 'white', border: 'none', borderRadius: '12px', padding: '14px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginTop: '16px' }}>
+                      ✓ Inscrit (Annuler ?)
+                    </button>
+                    <button
+                      onClick={handleAddToCalendar}
+                      disabled={addingToCalendar || calendarAdded}
+                      style={{
+                        width: '100%',
+                        background: calendarAdded ? '#E8F8F0' : 'white',
+                        color: calendarAdded ? '#1a7a47' : '#4A4AE8',
+                        border: `1.5px solid ${calendarAdded ? '#b2dfcd' : '#c5caf5'}`,
+                        borderRadius: '10px',
+                        padding: '10px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: calendarAdded ? 'default' : 'pointer',
+                        marginTop: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      {calendarAdded ? '✓ Ajouté au Google Agenda' : addingToCalendar ? 'Ajout en cours...' : '📅 Ajouter à Google Agenda'}
+                    </button>
+                    {calendarNotConnected && (
+                      <div style={{ marginTop: '10px', padding: '12px', borderRadius: '8px', background: '#FFF8E6', border: '1px solid #F5C97A', fontSize: '12px', color: '#7a4f00' }}>
+                        <div style={{ fontWeight: 600, marginBottom: '6px' }}>📅 Google Agenda non connecté</div>
+                        <div style={{ marginBottom: '8px', lineHeight: '1.5' }}>Connectez votre compte pour ajouter vos événements automatiquement.</div>
+                        <button
+                          onClick={() => navigate('/student/profile?tab=Préférences')}
+                          style={{ width: '100%', background: '#F5C97A', color: '#7a4f00', border: 'none', borderRadius: '6px', padding: '7px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Connecter Google Agenda →
+                        </button>
+                      </div>
+                    )}
+                    {calendarMsg && (
+                      <div style={{
+                        marginTop: '10px',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        background: calendarMsg.type === 'success' ? '#E8F8F0' : '#FDECEA',
+                        color: calendarMsg.type === 'success' ? '#1a7a47' : '#c0392b',
+                        border: `1px solid ${calendarMsg.type === 'success' ? '#b2dfcd' : '#f5c6cb'}`,
+                      }}>
+                        {calendarMsg.text}
+                      </div>
+                    )}
+                  </>
                 ) : isFull ? (
                   <button onClick={handleRegister} disabled={registering} style={{ width: '100%', background: 'linear-gradient(135deg, #F39C12, #D68910)', color: 'white', border: 'none', borderRadius: '12px', padding: '14px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginTop: '16px' }}>
                     ⏳ Rejoindre la liste d'attente

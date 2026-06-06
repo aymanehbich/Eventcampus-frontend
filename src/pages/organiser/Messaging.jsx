@@ -156,16 +156,19 @@ export default function Messaging() {
       : (res.data.data || res.data.messages || [])
 
     // Current connected user id
-    const currentUserId = Number(localStorage.getItem('user_id'))
+    const currentUserId = Number(localStorage.getItem('user_id')) || JSON.parse(localStorage.getItem('user') || '{}')?.id
 
     // Format messages for frontend
-    const formattedMessages = rawMessages.map(msg => ({
-      id: msg.id,
-      content: msg.content,
-      sentAt: msg.created_at,
-      isOwn: msg.user_id === currentUserId,
-      senderName: msg.sender?.name || 'Utilisateur'
-    }))
+    const formattedMessages = rawMessages.map(msg => {
+      const senderId = msg.sender?.id || msg.user_id
+      return {
+        id: msg.id,
+        content: msg.content,
+        sentAt: msg.created_at,
+        isOwn: Number(senderId) === Number(currentUserId),
+        senderName: msg.sender?.name || 'Utilisateur'
+      }
+    })
 
     setMessages(formattedMessages)
   } catch (err) {

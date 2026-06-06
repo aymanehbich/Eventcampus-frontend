@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { updatePreferences } from '../../api/auth'
+import { updatePreferences, updatePhone } from '../../api/auth'
 import { getClubs } from '../../api/clubs'
 import Navbar from '../../components/Navbar'
 import './Profile.css'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getMyInscriptions } from '../../api/profil'
 import { unregisterEvent } from '../../api/events'
 import { getNotifications } from '../../api/notifications'
+import { getCalendarAuthUrl, getCalendarStatus, disconnectCalendar } from '../../api/googleCalendar'
 
 const TABS = ['Mes inscriptions', 'Mes clubs', 'Messages', 'Notifications', 'Préférences']
 
@@ -14,10 +15,21 @@ function Profile() {
   const [user, setUser] = useState(null)
   const [activeTab, setActiveTab] = useState('Préférences')
   const [emailReminders, setEmailReminders] = useState(true)
+  const [whatsappReminders, setWhatsappReminders] = useState(false)
+  const [whatsappLoading, setWhatsappLoading] = useState(false)
+  const [whatsappMessage, setWhatsappMessage] = useState(null)
+  const [whatsappError, setWhatsappError] = useState(null)
+  const [phone, setPhone] = useState('')
+  const [phoneMessage, setPhoneMessage] = useState(null)
+  const [phoneError, setPhoneError] = useState(null)
+  const [phoneLoading, setPhoneLoading] = useState(false)
   const [message, setMessage] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [unreadNotifCount, setUnreadNotifCount] = useState(0)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [calendarConnected, setCalendarConnected] = useState(false)
+  const [calendarMsg, setCalendarMsg] = useState(null)
 
   useEffect(() => {
     getNotifications()
@@ -29,6 +41,27 @@ function Profile() {
   }, [])
 
   useEffect(() => {
+    // Charger le statut de connexion Google Calendar
+    getCalendarStatus()
+      .then(res => setCalendarConnected(res.data.connected))
+      .catch(() => {})
+
+    // Gérer le retour OAuth2 Google Calendar
+    const calendarParam = searchParams.get('calendar')
+    if (calendarParam === 'success') {
+      setCalendarConnected(true)
+      setCalendarMsg({ type: 'success', text: '✅ Google Agenda connecté avec succès !' })
+      setSearchParams({})
+    } else if (calendarParam === 'denied') {
+      setCalendarMsg({ type: 'warning', text: "⚠️ Vous avez refusé l'accès à Google Agenda." })
+      setSearchParams({})
+    } else if (calendarParam === 'error') {
+      setCalendarMsg({ type: 'error', text: '❌ Erreur lors de la connexion à Google Agenda.' })
+      setSearchParams({})
+    }
+  }, [])
+
+  useEffect(() => {
     const stored = localStorage.getItem('user')
     if (stored) {
       const parsed = JSON.parse(stored)
@@ -36,8 +69,50 @@ function Profile() {
       if (parsed.email_reminders !== undefined) {
         setEmailReminders(parsed.email_reminders)
       }
+      if (parsed.phone) setPhone(parsed.phone)
+      if (parsed.whatsapp_reminders !== undefined) setWhatsappReminders(!!parsed.whatsapp_reminders)
     }
   }, [])
+
+  const handleToggleWhatsapp = async () => {
+    const newValue = !whatsappReminders
+    setWhatsappLoading(true)
+    setWhatsappMessage(null)
+    setWhatsappError(null)
+    try {
+      await updatePhone({ phone, whatsapp_reminders: newValue })
+      setWhatsappReminders(newValue)
+      const stored = localStorage.getItem('user')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        localStorage.setItem('user', JSON.stringify({ ...parsed, whatsapp_reminders: newValue }))
+      }
+      setWhatsappMessage(newValue ? 'Rappels WhatsApp activés.' : 'Rappels WhatsApp désactivés.')
+    } catch {
+      setWhatsappError('Une erreur est survenue. Veuillez réessayer.')
+    } finally {
+      setWhatsappLoading(false)
+    }
+  }
+
+  const handleSavePhone = async () => {
+    setPhoneLoading(true)
+    setPhoneMessage(null)
+    setPhoneError(null)
+    try {
+      const res = await updatePhone({ phone })
+      const stored = localStorage.getItem('user')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        localStorage.setItem('user', JSON.stringify({ ...parsed, phone: res.data.phone }))
+      }
+      setPhoneMessage('Numéro de téléphone enregistré.')
+    } catch {
+      setPhoneError('Une erreur est survenue. Veuillez réessayer.')
+    } finally {
+      setPhoneLoading(false)
+    }
+  }
 
   const handleToggle = async () => {
     const newValue = !emailReminders
@@ -100,6 +175,36 @@ function Profile() {
             message={message}
             error={error}
             onToggle={handleToggle}
+            phone={phone}
+            onPhoneChange={setPhone}
+            onSavePhone={handleSavePhone}
+            phoneLoading={phoneLoading}
+            phoneMessage={phoneMessage}
+            phoneError={phoneError}
+            whatsappReminders={whatsappReminders}
+            whatsappLoading={whatsappLoading}
+            whatsappMessage={whatsappMessage}
+            whatsappError={whatsappError}
+            onToggleWhatsapp={handleToggleWhatsapp}
+            calendarConnected={calendarConnected}
+            calendarMsg={calendarMsg}
+            onCalendarConnect={async () => {
+              try {
+                const res = await getCalendarAuthUrl()
+                window.location.href = res.data.url
+              } catch {
+                setCalendarMsg({ type: 'error', text: 'Impossible d\'obtenir le lien de connexion.' })
+              }
+            }}
+            onCalendarDisconnect={async () => {
+              try {
+                await disconnectCalendar()
+                setCalendarConnected(false)
+                setCalendarMsg({ type: 'success', text: 'Google Agenda déconnecté.' })
+              } catch {
+                setCalendarMsg({ type: 'error', text: 'Une erreur est survenue.' })
+              }
+            }}
           />
         )}
       </div>
@@ -321,6 +426,7 @@ function ClubsTab() {
 }
 
 function MessagesTab() {
+  const navigate = useNavigate()
   const [receivedMessages, setReceivedMessages] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -342,6 +448,7 @@ function MessagesTab() {
         content: msg.content,
         created_at: msg.created_at,
         read_at: msg.is_read ? msg.created_at : null,
+        sender_id: msg.sender?.id,
 
         sender_name:
           msg.sender?.name ||
@@ -362,6 +469,26 @@ function MessagesTab() {
 
   fetchMessages()
 }, [])
+
+  const handleReply = async (msg) => {
+    if (!msg.sender_id) {
+      alert('Impossible de répondre à ce message.')
+      return
+    }
+    try {
+      const { startConversation } = await import('../../api/messages')
+      await startConversation(msg.sender_id)
+      navigate('/student/messages', {
+        state: {
+          organizerId: msg.sender_id,
+          organizerName: msg.sender_name,
+        },
+      })
+    } catch (err) {
+      console.error('Erreur lors du démarrage de la conversation', err)
+      alert('Impossible de démarrer la conversation.')
+    }
+  }
 
   const formatDate = (d) =>
     new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -402,7 +529,7 @@ function MessagesTab() {
               <div className="msg-club-icon" style={{ background: getCategoryColor(msg.club_category) }}>
                 {getCategoryEmoji(msg.club_category)}
               </div>
-              <div className="msg-body">
+              <div className="msg-body" onClick={() => handleReply(msg)} style={{ cursor: 'pointer' }}>
 <div className="msg-club">
   {msg.sender_name || 'Organisateur'}
 </div>                <div className="msg-subject">{msg.subject || msg.content?.substring(0, 50)}</div>
@@ -411,6 +538,16 @@ function MessagesTab() {
               <div className="msg-meta">
                 <div className="msg-date">{formatDate(msg.sent_at || msg.created_at)}</div>
                 {!msg.read_at && <div className="unread-dot" />}
+                <button
+                  className="btn-ghost"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleReply(msg)
+                  }}
+                  style={{ fontSize: '11px', padding: '3px 10px' }}
+                >
+                  Répondre
+                </button>
               </div>
             </div>
           ))}
@@ -466,10 +603,35 @@ function NotificationsTab() {
   )
 }
 
-function PreferencesTab({ emailReminders, loading, message, error, onToggle }) {
+function PreferencesTab({ emailReminders, loading, message, error, onToggle, phone, onPhoneChange, onSavePhone, phoneLoading, phoneMessage, phoneError, whatsappReminders, whatsappLoading, whatsappMessage, whatsappError, onToggleWhatsapp, calendarConnected, calendarMsg, onCalendarConnect, onCalendarDisconnect }) {
   return (
     <>
-      <div className="section-header"><h3>Préférences de notifications</h3></div>
+      <div className="section-header"><h3>Coordonnées</h3></div>
+      <div className="notif-card">
+        <div className="notif-card-title">📱 Numéro de téléphone</div>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '12px' }}>
+          <input
+            type="tel"
+            placeholder="+212620080504"
+            value={phone}
+            onChange={(e) => onPhoneChange(e.target.value)}
+            style={{ flex: 1, border: '1.5px solid #E0E0E6', borderRadius: '8px', padding: '9px 12px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
+            onFocus={(e) => e.target.style.borderColor = '#E94560'}
+            onBlur={(e) => e.target.style.borderColor = '#E0E0E6'}
+          />
+          <button
+            onClick={onSavePhone}
+            disabled={phoneLoading}
+            style={{ background: '#E94560', color: 'white', border: 'none', borderRadius: '8px', padding: '9px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}
+          >
+            {phoneLoading ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+        </div>
+        {phoneMessage && <div className="profile-msg profile-msg--success" style={{ marginTop: '8px' }}>{phoneMessage}</div>}
+        {phoneError && <div className="profile-msg profile-msg--error" style={{ marginTop: '8px' }}>{phoneError}</div>}
+      </div>
+
+      <div className="section-header" style={{ marginTop: '28px' }}><h3>Préférences de notifications</h3></div>
       <div className="notif-card">
         <div className="notif-card-title">🔔 Notifications par email</div>
 
@@ -507,6 +669,74 @@ function PreferencesTab({ emailReminders, loading, message, error, onToggle }) {
 
       {message && <div className="profile-msg profile-msg--success">{message}</div>}
       {error && <div className="profile-msg profile-msg--error">{error}</div>}
+
+      <div className="notif-card" style={{ marginTop: '12px' }}>
+        <div className="notif-card-title">💬 Rappels WhatsApp</div>
+        <div className="toggle-row">
+          <div>
+            <div className="toggle-label">Recevoir les rappels d'événements par WhatsApp</div>
+            <div className="toggle-sub">Un message WhatsApp est envoyé la veille (J-1) de chaque événement auquel vous êtes inscrit</div>
+          </div>
+          <button
+            className={`toggle${whatsappReminders ? '' : ' off'}`}
+            onClick={onToggleWhatsapp}
+            disabled={whatsappLoading}
+            aria-pressed={whatsappReminders}
+            aria-label="Activer ou désactiver les rappels WhatsApp"
+          />
+        </div>
+        {whatsappMessage && <div className="profile-msg profile-msg--success" style={{ marginTop: '8px' }}>{whatsappMessage}</div>}
+        {whatsappError && <div className="profile-msg profile-msg--error" style={{ marginTop: '8px' }}>{whatsappError}</div>}
+      </div>
+
+      {/* ── Google Agenda ── */}
+      <div className="section-header" style={{ marginTop: '28px' }}><h3>Intégrations</h3></div>
+      <div className="notif-card">
+        <div className="notif-card-title">📅 Google Agenda</div>
+        <div className="toggle-row" style={{ alignItems: 'center' }}>
+          <div>
+            <div className="toggle-label">Synchroniser avec Google Agenda</div>
+            <div className="toggle-sub">
+              {calendarConnected
+                ? 'Votre Google Agenda est connecté.'
+                : 'Connectez votre Google Agenda pour ajouter automatiquement les événements auxquels vous vous inscrivez.'}
+            </div>
+          </div>
+          <button
+            onClick={calendarConnected ? onCalendarDisconnect : onCalendarConnect}
+            style={{
+              padding: '9px 18px',
+              borderRadius: '8px',
+              border: calendarConnected ? '1.5px solid #E0E0E6' : 'none',
+              background: calendarConnected ? 'white' : 'linear-gradient(135deg, #4285F4, #1a73e8)',
+              color: calendarConnected ? '#7A7A8C' : 'white',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            {calendarConnected ? 'Déconnecter' : '🔗 Connecter'}
+          </button>
+        </div>
+        {calendarConnected && (
+          <div style={{ marginTop: '8px', fontSize: '12px', color: '#2ECC71', fontWeight: 600 }}>
+            ✅ Connecté
+          </div>
+        )}
+      </div>
+
+      {calendarMsg && (
+        <div className={`profile-msg ${
+          calendarMsg.type === 'success' ? 'profile-msg--success'
+          : calendarMsg.type === 'warning' ? 'profile-msg--warning'
+          : 'profile-msg--error'
+        }`}>
+          {calendarMsg.text}
+        </div>
+      )}
 
       <div className="email-preview-label">Aperçu de l'email de rappel</div>
       <div className="email-preview">
