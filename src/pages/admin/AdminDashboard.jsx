@@ -295,12 +295,7 @@ const handleDeactivateUser = async (userId) => {
         >
           👥 Utilisateurs
         </div>
-        <div
-          style={activeSection === 'validation' ? s.navActive : s.navItem}
-          onClick={() => setActiveSection('validation')}
-        >
-          ✅ Validations
-        </div>
+       
         <div
           style={activeSection === 'clubs' ? s.navActive : s.navItem}
           onClick={() => setActiveSection('clubs')}
@@ -334,7 +329,6 @@ const handleDeactivateUser = async (userId) => {
             <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', color: '#1A1A2E' }}>
               {activeSection === 'statistics' && '📊 Statistiques'}
               {activeSection === 'users' && '👥 Utilisateurs'}
-              {activeSection === 'validation' && '✅ Validation des utilisateurs'}
               {activeSection === 'clubs' && '🏛️ Validation des clubs'}
               {activeSection === 'events' && '📅 Validation des événements'}
               {activeSection === 'role-requests' && '🔑 Demandes de rôle organisateur'}
@@ -501,68 +495,7 @@ const handleDeactivateUser = async (userId) => {
           </div>
         )}
 
-        {/* User Validation Section */}
-        {activeSection === 'validation' && (
-          <div>
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
-            ) : pendingUsers.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun utilisateur en attente de validation</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {pendingUsers.map((pendingUser) => {
-                  const isLast = pendingUsers[pendingUsers.length - 1].id === pendingUser.id
-                  return (
-                    <div key={pendingUser.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontWeight: 600, color: '#1A1A2E', fontSize: '14px', marginBottom: '4px' }}>{pendingUser.name}</div>
-                        <div style={{ color: '#555', fontSize: '12px', marginBottom: '8px' }}>{pendingUser.email}</div>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                          <span style={{ background: 'rgba(233,69,96,0.1)', color: '#E94560', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{pendingUser.role === 'etudiant' ? '🎓 Étudiant' : pendingUser.role === 'organisateur' ? '🏛️ Organisateur' : '⚙️ Admin'}</span>
-                          <span style={{ fontSize: '11px', color: '#7A7A8C' }}>{pendingUser.date}</span>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await activateUser(pendingUser.id)
-                              alert('Utilisateur validé avec succès')
-                              fetchPendingUsers()
-                            } catch (err) {
-                              alert("Erreur lors de la validation")
-                            }
-                          }}
-                          style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          ✓ Accepter
-                        </button>
-                        <button
-                            onClick={async () => {
-                            try {
-                              await deactivateUser(pendingUser.id)
-                              alert('Utilisateur refusé')
-                              fetchPendingUsers()
-                            } catch (err) {
-                              alert("Erreur lors du refus")
-                            }
-                          }}
-                          style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          ✕ Refuser
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
+      
 
         {/* Clubs Validation Section */}
         {activeSection === 'clubs' && (
