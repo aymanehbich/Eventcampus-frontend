@@ -315,18 +315,6 @@ const handleDeactivateUser = async (userId) => {
           🔑 Demandes de rôle
         </div>
         <div
-          style={activeSection === 'clubs' ? s.navActive : s.navItem}
-          onClick={() => setActiveSection('clubs')}
-        >
-          🏛️ Clubs
-        </div>
-        <div
-          style={activeSection === 'events' ? s.navActive : s.navItem}
-          onClick={() => setActiveSection('events')}
-        >
-          📅 Événements
-        </div>
-        <div
           style={activeSection === 'activity' ? s.navActive : s.navItem}
           onClick={() => setActiveSection('activity')}
         >
