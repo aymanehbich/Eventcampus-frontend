@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { logout } from '../../api/auth'
-import { getUsers, getPendingUsers, activateUser, deactivateUser, activateRole, getPendingClubs, getValidatedClubs, getSuspendedClubs, approveClub, rejectClub, suspendClub, reactivateClub, deleteClub, getPendingEvents, getAllEvents, validateEvent, rejectEvent } from '../../api/admin'
+import { getUsers, getPendingUsers, activateUser, deactivateUser, rejectUser, activateRole, getPendingClubs, getValidatedClubs, getSuspendedClubs, approveClub, rejectClub, suspendClub, reactivateClub, deleteClub, getPendingEvents, getAllEvents, validateEvent, rejectEvent } from '../../api/admin'
 import StatisticsSection from './StatisticsSection'
 import RoleRequestsSection from './RoleRequestsSection'
 
@@ -38,8 +38,6 @@ function AdminDashboard() {
   useEffect(() => {
     if (activeSection === 'users') {
       fetchUsers()
-    } else if (activeSection === 'validation') {
-      fetchPendingUsers()
     } else if (activeSection === 'clubs') {
       fetchPendingClubs()
       fetchValidatedClubs()
@@ -81,9 +79,8 @@ function AdminDashboard() {
   const handleActivateUser = async (userId) => {
   try {
     await activateUser(userId)
-    alert('Utilisateur activé avec succès')
+    setPendingUsers(prev => prev.filter(u => u.id !== userId))
     fetchUsers()
-    fetchPendingUsers() // ← add this
   } catch (err) {
     alert("Erreur lors de l'activation")
   }
@@ -94,9 +91,18 @@ const handleDeactivateUser = async (userId) => {
     await deactivateUser(userId)
     alert('Utilisateur désactivé avec succès')
     fetchUsers()
-    fetchPendingUsers() // ← add this
+    fetchPendingUsers()
   } catch (err) {
     alert("Erreur lors de la désactivation")
+  }
+}
+
+const handleRejectUser = async (userId) => {
+  try {
+    await rejectUser(userId)
+    setPendingUsers(prev => prev.filter(u => u.id !== userId))
+  } catch (err) {
+    alert("Erreur lors du refus")
   }
 }
 
@@ -295,8 +301,7 @@ const handleDeactivateUser = async (userId) => {
         >
           👥 Utilisateurs
         </div>
-       
-        <div
+<div
           style={activeSection === 'clubs' ? s.navActive : s.navItem}
           onClick={() => setActiveSection('clubs')}
         >
@@ -329,7 +334,6 @@ const handleDeactivateUser = async (userId) => {
             <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', color: '#1A1A2E' }}>
               {activeSection === 'statistics' && '📊 Statistiques'}
               {activeSection === 'users' && '👥 Utilisateurs'}
-              {activeSection === 'validation' && '✅ Validation des utilisateurs'}
               {activeSection === 'clubs' && '🏛️ Validation des clubs'}
               {activeSection === 'events' && '📅 Validation des événements'}
               {activeSection === 'role-requests' && '🔑 Demandes de rôle organisateur'}
@@ -495,7 +499,7 @@ const handleDeactivateUser = async (userId) => {
           </div>
         )}
 
-      
+
 
         {/* Clubs Validation Section */}
         {activeSection === 'clubs' && (

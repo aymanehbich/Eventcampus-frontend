@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { updatePreferences, updatePhone } from '../../api/auth'
+import { submitRoleRequest } from '../../api/roleRequests'
 import { getClubs } from '../../api/clubs'
 import Navbar from '../../components/Navbar'
 import './Profile.css'
@@ -30,6 +31,8 @@ function Profile() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [calendarConnected, setCalendarConnected] = useState(false)
   const [calendarMsg, setCalendarMsg] = useState(null)
+  const [roleRequestMsg, setRoleRequestMsg] = useState(null)
+  const [roleRequestLoading, setRoleRequestLoading] = useState(false)
 
   useEffect(() => {
     getNotifications()
@@ -114,6 +117,29 @@ function Profile() {
     }
   }
 
+  const handleRoleRequest = async () => {
+    setRoleRequestLoading(true)
+    setRoleRequestMsg(null)
+    try {
+      const stored = JSON.parse(localStorage.getItem('user') || 'null')
+      await submitRoleRequest({
+        name: stored?.name ?? '',
+        email: stored?.email ?? '',
+        student_id: stored?.student_id ?? '',
+        is_existing_student: true,
+      })
+      setRoleRequestMsg({ type: 'success', text: 'Votre demande a été envoyée.' })
+    } catch (err) {
+      if (err.response?.status === 409) {
+        setRoleRequestMsg({ type: 'warning', text: 'Vous avez déjà une demande en attente.' })
+      } else {
+        setRoleRequestMsg({ type: 'error', text: 'Une erreur est survenue. Réessayez.' })
+      }
+    } finally {
+      setRoleRequestLoading(false)
+    }
+  }
+
   const handleToggle = async () => {
     const newValue = !emailReminders
     setLoading(true)
@@ -188,6 +214,10 @@ function Profile() {
             onToggleWhatsapp={handleToggleWhatsapp}
             calendarConnected={calendarConnected}
             calendarMsg={calendarMsg}
+            roleRequestMsg={roleRequestMsg}
+            roleRequestLoading={roleRequestLoading}
+            onRoleRequest={handleRoleRequest}
+            userRole={JSON.parse(localStorage.getItem('user') || 'null')?.role}
             onCalendarConnect={async () => {
               try {
                 const res = await getCalendarAuthUrl()
@@ -603,9 +633,42 @@ function NotificationsTab() {
   )
 }
 
-function PreferencesTab({ emailReminders, loading, message, error, onToggle, phone, onPhoneChange, onSavePhone, phoneLoading, phoneMessage, phoneError, whatsappReminders, whatsappLoading, whatsappMessage, whatsappError, onToggleWhatsapp, calendarConnected, calendarMsg, onCalendarConnect, onCalendarDisconnect }) {
+function PreferencesTab({ emailReminders, loading, message, error, onToggle, phone, onPhoneChange, onSavePhone, phoneLoading, phoneMessage, phoneError, whatsappReminders, whatsappLoading, whatsappMessage, whatsappError, onToggleWhatsapp, calendarConnected, calendarMsg, onCalendarConnect, onCalendarDisconnect, roleRequestMsg, roleRequestLoading, onRoleRequest, userRole }) {
   return (
     <>
+      {userRole === 'etudiant' && (
+        <>
+          <div className="section-header"><h3>Rôle</h3></div>
+          <div className="notif-card">
+            <div className="notif-card-title">🏛️ Devenir organisateur</div>
+            <p style={{ fontSize: '13px', color: '#7A7A8C', margin: '8px 0 16px' }}>
+              Vous souhaitez créer et gérer des événements ? Envoyez une demande à l'administrateur pour obtenir le rôle organisateur.
+            </p>
+            <button
+              onClick={onRoleRequest}
+              disabled={roleRequestLoading}
+              style={{
+                background: '#E94560', color: 'white', border: 'none',
+                borderRadius: '8px', padding: '9px 20px', fontSize: '13px',
+                fontWeight: 600, cursor: roleRequestLoading ? 'not-allowed' : 'pointer',
+                opacity: roleRequestLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              {roleRequestLoading ? 'Envoi en cours…' : 'Devenir organisateur'}
+            </button>
+            {roleRequestMsg && (
+              <div className={`profile-msg ${
+                roleRequestMsg.type === 'success' ? 'profile-msg--success'
+                : roleRequestMsg.type === 'warning' ? 'profile-msg--warning'
+                : 'profile-msg--error'
+              }`} style={{ marginTop: '12px' }}>
+                {roleRequestMsg.text}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
       <div className="section-header"><h3>Coordonnées</h3></div>
       <div className="notif-card">
         <div className="notif-card-title">📱 Numéro de téléphone</div>
