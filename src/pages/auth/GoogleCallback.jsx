@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import './Login.css'
 
 function GoogleCallback() {
   const navigate = useNavigate()
@@ -33,8 +34,9 @@ function GoogleCallback() {
   }, [navigate])
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#EAEAEF' }}>
-      <p style={{ fontFamily: 'DM Sans, sans-serif', color: '#7A7A8C' }}>Connexion en cours…</p>
+    <div className="au__loading" role="status" aria-live="polite">
+      <span className="au__spinner" aria-hidden="true" />
+      <p>Connexion en cours…</p>
     </div>
   )
 }

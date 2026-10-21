@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { login as loginApi } from '../../api/auth'
+import logo from '../../assets/logo-fssm.png'
 import './AdminLogin.css'
 
 function getRedirect() {
@@ -56,45 +57,58 @@ function AdminLogin() {
   }
 
   return (
-    <div className="admin-login-body">
-      <div className="admin-card">
-        <div className="admin-left">
-          <div className="admin-emoji">⚙️</div>
-          <h2>EventCampus Admin</h2>
-          <p>Espace d'administration de la plateforme.</p>
-        </div>
-        <div className="admin-right">
-          <h3>Connexion Admin</h3>
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label>Adresse e-mail</label>
-              <input
-                name="email"
-                type="email"
-                placeholder="admin@eventcampus.ma"
-                value={formData.email}
-                onChange={handleChange}
-              />
-              {errors.email && <div className="field-error">{errors.email[0]}</div>}
-            </div>
-            <div className="form-group">
-              <label>Mot de passe</label>
-              <input
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-              />
-              {errors.password && <div className="field-error">{errors.password[0]}</div>}
-            </div>
-            {errors.general && <div className="form-error">{errors.general[0]}</div>}
-            <button type="submit" className="btn-submit" disabled={loading}>
-              {loading ? 'Connexion…' : 'Se connecter'}
-            </button>
-          </form>
-        </div>
-      </div>
+    <div className="adl">
+      <main className="adl__card">
+        <img className="adl__logo" src={logo} alt="Faculté des Sciences Semlalia Marrakech" />
+        <span className="ec-badge ec-badge--terra adl__badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6l-8-3z" />
+          </svg>
+          Espace administrateur
+        </span>
+        <h1 className="adl__title">Connexion Admin</h1>
+        <p className="adl__sub">Espace d&apos;administration de la plateforme EventCampus.</p>
+
+        <form onSubmit={handleSubmit}>
+          <div className="ec-field">
+            <label className="ec-label" htmlFor="adl-email">Adresse e-mail</label>
+            <input
+              id="adl-email"
+              className={`ec-input${errors.email ? ' is-error' : ''}`}
+              name="email"
+              type="email"
+              autoComplete="username"
+              placeholder="admin@eventcampus.ma"
+              value={formData.email}
+              onChange={handleChange}
+              aria-invalid={errors.email ? 'true' : undefined}
+              aria-describedby={errors.email ? 'adl-email-err' : undefined}
+            />
+            {errors.email && <div className="ec-error" id="adl-email-err" role="alert">{errors.email[0]}</div>}
+          </div>
+          <div className="ec-field">
+            <label className="ec-label" htmlFor="adl-password">Mot de passe</label>
+            <input
+              id="adl-password"
+              className={`ec-input${errors.password ? ' is-error' : ''}`}
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={handleChange}
+              aria-invalid={errors.password ? 'true' : undefined}
+              aria-describedby={errors.password ? 'adl-password-err' : undefined}
+            />
+            {errors.password && <div className="ec-error" id="adl-password-err" role="alert">{errors.password[0]}</div>}
+          </div>
+          {errors.general && <div className="ec-alert ec-alert--error adl__alert" role="alert">{errors.general[0]}</div>}
+          <button type="submit" className="ec-btn ec-btn--primary ec-btn--block adl__submit" disabled={loading}>
+            {loading && <span className="adl__spinner" aria-hidden="true" />}
+            {loading ? 'Connexion…' : 'Se connecter'}
+          </button>
+        </form>
+      </main>
     </div>
   )
 }

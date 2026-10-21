@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { register } from '../../api/auth'
 import { checkEmail, submitRoleRequest } from '../../api/roleRequests'
+import logo from '../../assets/logo-fssm.png'
+import './Login.css'
 import './Register.css'
 
 function getRedirect() {
@@ -103,87 +105,129 @@ function Register() {
   if (redirect) return <Navigate to={redirect} replace />
 
   return (
-    <div className="register-body">
-      <div className="card">
-        <div className="left">
-          <div className="emoji">✨</div>
-          <h2>Rejoignez EventCampus</h2>
-          <p>Créez votre compte et participez pleinement à la vie universitaire.</p>
+    <div className="au">
+      <section className="au__intro" aria-label="Présentation">
+        <img className="au__logo" src={logo} alt="Faculté des Sciences Semlalia Marrakech" />
+        <h1 className="au__title">Rejoignez la vie étudiante &amp; scientifique de Semlalia</h1>
+        <p className="au__lead">
+          Créez votre compte et participez pleinement aux événements, clubs et conférences de la faculté.
+        </p>
+        <div className="au__promo">
+          <p className="au__promo-title">
+            <svg className="au__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5 6.6 19.5l1.2-6L3.3 9.3l6.1-.7L12 3z" />
+            </svg>
+            Un seul compte, tout le campus
+          </p>
+          <p className="au__promo-text">
+            Étudiants ou organisateurs de clubs, retrouvez les outils adaptés à votre rôle.
+          </p>
         </div>
-        <div className="right">
-          <h3>Créer un compte</h3>
+      </section>
+
+      <main className="au__main">
+        <div className="au__card">
+          <img className="au__card-logo" src={logo} alt="Faculté des Sciences Semlalia Marrakech" />
+          <h2 className="au__card-title">Créer un compte</h2>
+          <p className="au__card-sub">Quelques informations suffisent pour commencer.</p>
+
           <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label>Je suis…</label>
-              <div className="role-options">
-                <div
-                  className={`role-card${formData.role === 'etudiant' ? ' selected' : ''}`}
+            <fieldset className="au__group">
+              <legend>Je suis…</legend>
+              <div className="au__roles">
+                <button
+                  type="button"
+                  className="au__role"
+                  aria-pressed={formData.role === 'etudiant'}
                   onClick={() => handleRoleSelect('etudiant')}
                 >
-                  <div className="r-icon">🎓</div>
-                  <div className="r-label">Étudiant</div>
-                  <div className="r-sub">Découvrir et s'inscrire</div>
-                </div>
-                <div
-                  className={`role-card${formData.role === 'organisateur' ? ' selected' : ''}`}
+                  <svg className="au__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 10 12 5 2 10l10 5 10-5z" /><path d="M6 12v5c3 2 9 2 12 0v-5" /></svg>
+                  <span className="au__role-label">Étudiant</span>
+                  <span className="au__role-sub">Découvrir et s&apos;inscrire</span>
+                </button>
+                <button
+                  type="button"
+                  className="au__role"
+                  aria-pressed={formData.role === 'organisateur'}
                   onClick={() => handleRoleSelect('organisateur')}
                 >
-                  <div className="r-icon">🏛️</div>
-                  <div className="r-label">Organisateur</div>
-                  <div className="r-sub">Gérer un club</div>
-                </div>
+                  <svg className="au__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6" /></svg>
+                  <span className="au__role-label">Organisateur</span>
+                  <span className="au__role-sub">Gérer un club</span>
+                </button>
               </div>
-            </div>
+            </fieldset>
 
             {formData.role === 'etudiant' && (
               <>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Prénom</label>
-                    <input
-                      name="prenom"
-                      placeholder="Aymane"
-                      value={formData.prenom}
-                      onChange={handleChange}
-                    />
-                    {errors.prenom && <div className="field-error">{errors.prenom[0]}</div>}
-                  </div>
-                  <div className="form-group">
-                    <label>Nom</label>
-                    <input
-                      name="nom"
-                      placeholder="Hbich"
-                      value={formData.nom}
-                      onChange={handleChange}
-                    />
-                    {errors.nom && <div className="field-error">{errors.nom[0]}</div>}
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>E-mail universitaire</label>
+                <div className="au__row">
+                <div className="ec-field">
+                  <label className="ec-label" htmlFor="reg-prenom">Prénom</label>
                   <input
-                    name="email"
-                    type="email"
-                    placeholder="prenom.nom@univ.ma"
-                    value={formData.email}
-                    onChange={handleChange}
+                  id="reg-prenom"
+                  className={`ec-input${errors.prenom ? ' is-error' : ''}`}
+                  name="prenom"
+                  autoComplete="given-name"
+                  placeholder="Aymane"
+                  value={formData.prenom}
+                  onChange={handleChange}
+                  aria-invalid={errors.prenom ? 'true' : undefined}
+                  aria-describedby={errors.prenom ? 'reg-prenom-err' : undefined}
                   />
-                  {errors.email && <div className="field-error">{errors.email[0]}</div>}
+                  {errors.prenom && <div className="ec-error" id="reg-prenom-err" role="alert">{errors.prenom[0]}</div>}
                 </div>
-                <div className="form-group">
-                  <label>Mot de passe</label>
+                <div className="ec-field">
+                  <label className="ec-label" htmlFor="reg-nom">Nom</label>
                   <input
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleChange}
+                  id="reg-nom"
+                  className={`ec-input${errors.nom ? ' is-error' : ''}`}
+                  name="nom"
+                  autoComplete="family-name"
+                  placeholder="Hbich"
+                  value={formData.nom}
+                  onChange={handleChange}
+                  aria-invalid={errors.nom ? 'true' : undefined}
+                  aria-describedby={errors.nom ? 'reg-nom-err' : undefined}
                   />
-                  {errors.password && <div className="field-error">{errors.password[0]}</div>}
+                  {errors.nom && <div className="ec-error" id="reg-nom-err" role="alert">{errors.nom[0]}</div>}
                 </div>
-                {errors.general && <div className="form-error">{errors.general[0]}</div>}
-                {success && <div className="form-success">{success}</div>}
-                <button type="submit" className="btn-submit" disabled={loading}>
+                </div>
+                <div className="ec-field">
+                  <label className="ec-label" htmlFor="reg-email">E-mail universitaire</label>
+                  <input
+                  id="reg-email"
+                  className={`ec-input${errors.email ? ' is-error' : ''}`}
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="prenom.nom@univ.ma"
+                  value={formData.email}
+                  onChange={handleChange}
+                  aria-invalid={errors.email ? 'true' : undefined}
+                  aria-describedby={errors.email ? 'reg-email-err' : undefined}
+                  />
+                  {errors.email && <div className="ec-error" id="reg-email-err" role="alert">{errors.email[0]}</div>}
+                </div>
+                <div className="ec-field">
+                  <label className="ec-label" htmlFor="reg-password">Mot de passe</label>
+                  <input
+                  id="reg-password"
+                  className={`ec-input${errors.password ? ' is-error' : ''}`}
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  aria-invalid={errors.password ? 'true' : undefined}
+                  aria-describedby={errors.password ? 'reg-password-err' : undefined}
+                  />
+                  {errors.password && <div className="ec-error" id="reg-password-err" role="alert">{errors.password[0]}</div>}
+                </div>
+                {errors.general && <div className="ec-alert ec-alert--error au__alert" role="alert">{errors.general[0]}</div>}
+                {success && <div className="ec-alert ec-alert--success au__alert" role="status">{success}</div>}
+                <button type="submit" className="ec-btn ec-btn--primary ec-btn--block au__submit" disabled={loading}>
+                  {loading && <span className="au__spinner" aria-hidden="true" />}
                   {loading ? 'Création…' : 'Créer mon compte'}
                 </button>
               </>
@@ -191,18 +235,24 @@ function Register() {
 
             {formData.role === 'organisateur' && orgStep === 'email' && (
               <>
-                <div className="form-group">
-                  <label>E-mail universitaire</label>
+                <div className="ec-field">
+                  <label className="ec-label" htmlFor="org-email">E-mail universitaire</label>
                   <input
-                    type="email"
-                    placeholder="prenom.nom@univ.ma"
-                    value={orgEmail}
-                    onChange={(e) => setOrgEmail(e.target.value)}
+                  id="org-email"
+                  className={`ec-input${errors.email ? ' is-error' : ''}`}
+                  type="email"
+                  autoComplete="email"
+                  placeholder="prenom.nom@univ.ma"
+                  value={orgEmail}
+                  onChange={(e) => setOrgEmail(e.target.value)}
+                  aria-invalid={errors.email ? 'true' : undefined}
+                  aria-describedby={errors.email ? 'org-email-err' : undefined}
                   />
-                  {errors.email && <div className="field-error">{errors.email[0]}</div>}
+                  {errors.email && <div className="ec-error" id="org-email-err" role="alert">{errors.email[0]}</div>}
                 </div>
-                {errors.general && <div className="form-error">{errors.general[0]}</div>}
-                <button type="button" className="btn-submit" disabled={loading} onClick={handleCheckEmail}>
+                {errors.general && <div className="ec-alert ec-alert--error au__alert" role="alert">{errors.general[0]}</div>}
+                <button type="button" className="ec-btn ec-btn--primary ec-btn--block au__submit" disabled={loading} onClick={handleCheckEmail}>
+                  {loading && <span className="au__spinner" aria-hidden="true" />}
                   {loading ? 'Vérification…' : 'Vérifier'}
                 </button>
               </>
@@ -210,21 +260,27 @@ function Register() {
 
             {formData.role === 'organisateur' && orgStep === 'exists' && (
               <>
-                <div className="form-info">
+                <div className="ec-alert ec-alert--info au__alert" role="status">
                   Un compte existe déjà avec cet e-mail, votre demande sera liée à ce compte.
                 </div>
-                <div className="form-group">
-                  <label>Numéro étudiant (optionnel)</label>
+                <div className="ec-field">
+                  <label className="ec-label" htmlFor="org-student-id">Numéro étudiant (optionnel)</label>
                   <input
-                    name="student_id"
-                    placeholder="Ex: 12345678"
-                    value={orgData.student_id}
-                    onChange={handleOrgDataChange}
+                  id="org-student-id"
+                  className={`ec-input${errors.student_id ? ' is-error' : ''}`}
+                  name="student_id"
+                  autoComplete="off"
+                  placeholder="Ex: 12345678"
+                  value={orgData.student_id}
+                  onChange={handleOrgDataChange}
+                  aria-invalid={errors.student_id ? 'true' : undefined}
+                  aria-describedby={errors.student_id ? 'org-student-id-err' : undefined}
                   />
-                  {errors.student_id && <div className="field-error">{errors.student_id[0]}</div>}
+                  {errors.student_id && <div className="ec-error" id="org-student-id-err" role="alert">{errors.student_id[0]}</div>}
                 </div>
-                {errors.general && <div className="form-error">{errors.general[0]}</div>}
-                <button type="button" className="btn-submit" disabled={loading} onClick={handleSubmitRoleRequest}>
+                {errors.general && <div className="ec-alert ec-alert--error au__alert" role="alert">{errors.general[0]}</div>}
+                <button type="button" className="ec-btn ec-btn--primary ec-btn--block au__submit" disabled={loading} onClick={handleSubmitRoleRequest}>
+                  {loading && <span className="au__spinner" aria-hidden="true" />}
                   {loading ? 'Envoi…' : 'Soumettre ma demande'}
                 </button>
               </>
@@ -232,77 +288,105 @@ function Register() {
 
             {formData.role === 'organisateur' && orgStep === 'not_exists' && (
               <>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Prénom</label>
-                    <input
-                      name="prenom"
-                      placeholder="Aymane"
-                      value={orgData.prenom}
-                      onChange={handleOrgDataChange}
-                    />
-                    {errors.prenom && <div className="field-error">{errors.prenom[0]}</div>}
-                  </div>
-                  <div className="form-group">
-                    <label>Nom</label>
-                    <input
-                      name="nom"
-                      placeholder="Hbich"
-                      value={orgData.nom}
-                      onChange={handleOrgDataChange}
-                    />
-                    {errors.nom && <div className="field-error">{errors.nom[0]}</div>}
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Mot de passe</label>
+                <div className="au__row">
+                <div className="ec-field">
+                  <label className="ec-label" htmlFor="org-prenom">Prénom</label>
                   <input
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={orgData.password}
-                    onChange={handleOrgDataChange}
+                  id="org-prenom"
+                  className={`ec-input${errors.prenom ? ' is-error' : ''}`}
+                  name="prenom"
+                  autoComplete="given-name"
+                  placeholder="Aymane"
+                  value={orgData.prenom}
+                  onChange={handleOrgDataChange}
+                  aria-invalid={errors.prenom ? 'true' : undefined}
+                  aria-describedby={errors.prenom ? 'org-prenom-err' : undefined}
                   />
-                  {errors.password && <div className="field-error">{errors.password[0]}</div>}
+                  {errors.prenom && <div className="ec-error" id="org-prenom-err" role="alert">{errors.prenom[0]}</div>}
                 </div>
-                <div className="form-group">
-                  <label>Confirmer le mot de passe</label>
+                <div className="ec-field">
+                  <label className="ec-label" htmlFor="org-nom">Nom</label>
                   <input
-                    name="password_confirmation"
-                    type="password"
-                    placeholder="••••••••"
-                    value={orgData.password_confirmation}
-                    onChange={handleOrgDataChange}
+                  id="org-nom"
+                  className={`ec-input${errors.nom ? ' is-error' : ''}`}
+                  name="nom"
+                  autoComplete="family-name"
+                  placeholder="Hbich"
+                  value={orgData.nom}
+                  onChange={handleOrgDataChange}
+                  aria-invalid={errors.nom ? 'true' : undefined}
+                  aria-describedby={errors.nom ? 'org-nom-err' : undefined}
                   />
+                  {errors.nom && <div className="ec-error" id="org-nom-err" role="alert">{errors.nom[0]}</div>}
                 </div>
-                <div className="form-group">
-                  <label>Numéro étudiant (optionnel)</label>
+                </div>
+                <div className="ec-field">
+                  <label className="ec-label" htmlFor="org-password">Mot de passe</label>
                   <input
-                    name="student_id"
-                    placeholder="Ex: 12345678"
-                    value={orgData.student_id}
-                    onChange={handleOrgDataChange}
+                  id="org-password"
+                  className={`ec-input${errors.password ? ' is-error' : ''}`}
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  value={orgData.password}
+                  onChange={handleOrgDataChange}
+                  aria-invalid={errors.password ? 'true' : undefined}
+                  aria-describedby={errors.password ? 'org-password-err' : undefined}
                   />
-                  {errors.student_id && <div className="field-error">{errors.student_id[0]}</div>}
+                  {errors.password && <div className="ec-error" id="org-password-err" role="alert">{errors.password[0]}</div>}
                 </div>
-                {errors.general && <div className="form-error">{errors.general[0]}</div>}
-                <button type="button" className="btn-submit" disabled={loading} onClick={handleSubmitRoleRequest}>
+                <div className="ec-field">
+                  <label className="ec-label" htmlFor="org-password-confirm">Confirmer le mot de passe</label>
+                  <input
+                  id="org-password-confirm"
+                  className="ec-input"
+                  name="password_confirmation"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  value={orgData.password_confirmation}
+                  onChange={handleOrgDataChange}
+                  />
+                </div>
+                <div className="ec-field">
+                  <label className="ec-label" htmlFor="org-student-id2">Numéro étudiant (optionnel)</label>
+                  <input
+                  id="org-student-id2"
+                  className={`ec-input${errors.student_id ? ' is-error' : ''}`}
+                  name="student_id"
+                  autoComplete="off"
+                  placeholder="Ex: 12345678"
+                  value={orgData.student_id}
+                  onChange={handleOrgDataChange}
+                  aria-invalid={errors.student_id ? 'true' : undefined}
+                  aria-describedby={errors.student_id ? 'org-student-id2-err' : undefined}
+                  />
+                  {errors.student_id && <div className="ec-error" id="org-student-id2-err" role="alert">{errors.student_id[0]}</div>}
+                </div>
+                {errors.general && <div className="ec-alert ec-alert--error au__alert" role="alert">{errors.general[0]}</div>}
+                <button type="button" className="ec-btn ec-btn--primary ec-btn--block au__submit" disabled={loading} onClick={handleSubmitRoleRequest}>
+                  {loading && <span className="au__spinner" aria-hidden="true" />}
                   {loading ? 'Envoi…' : 'Créer mon compte et soumettre ma demande'}
                 </button>
               </>
             )}
 
             {formData.role === 'organisateur' && orgStep === 'success' && (
-              <div className="org-success">
-                <div className="org-success-icon">✅</div>
-                <p>Votre demande a été soumise avec succès. L'admin va valider votre demande.</p>
-                <a href="/login" className="org-success-link">Se connecter</a>
+              <div className="au__success" role="status">
+                <svg className="au__success-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="m8 12 3 3 5-6" />
+                </svg>
+                <p>Votre demande a été soumise avec succès. L&apos;admin va valider votre demande.</p>
+                <a href="/login" className="ec-btn ec-btn--primary">Se connecter</a>
               </div>
             )}
           </form>
-          <p className="footer-text">Déjà un compte ? <a href="/login">Se connecter</a></p>
+
+          <p className="au__footer">Déjà un compte ? <a className="au__link" href="/login">Se connecter</a></p>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

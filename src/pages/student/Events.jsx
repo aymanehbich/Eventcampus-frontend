@@ -1,39 +1,48 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import { getEvents } from '../../api/events'
+import './Events.css'
 
-const EVENT_CATEGORIES = ['Tous', 'Conférence', 'Atelier', 'Soirée', 'Réunion de club']
-const EVENT_DATES = ['Tous', 'Cette semaine', 'Ce mois']
+const CHIP_TONES = ['sand', 'sand', 'mint', 'sand', 'gray']
+const DOW = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
-const CATEGORY_COLORS = {
-  Conférence: '#FFF0E6',
-  Atelier: '#E6F0FF',
-  Soirée: '#FFE6F0',
-  'Réunion de club': '#F0E6FF',
-  Hackathon: '#E6FFE6',
-  Environnement: '#E6FFFA',
-  default: '#F4F4F6',
-}
+const Icon = ({ children, ...props }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+    {children}
+  </svg>
+)
+const PinIcon = () => (
+  <Icon><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></Icon>
+)
+const ClockIcon = () => (
+  <Icon><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></Icon>
+)
 
-const CATEGORY_EMOJIS = {
-  Conférence: '🎤',
-  Atelier: '🎨',
-  Soirée: '🎭',
-  'Réunion de club': '👥',
-  Hackathon: '👨‍💻',
-  Environnement: '🌱',
-  default: '📅',
-}
+const pad = (n) => String(n).padStart(2, '0')
+const monthKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
+const dayKey = (d) => `${monthKey(d)}-${pad(d.getDate())}`
 
-const CATEGORY_TAGS = {
-  Conférence: { bg: '#EEF0FF', color: '#4A4AE8' },
-  Atelier: { bg: '#EEF0FF', color: '#4A4AE8' },
-  Soirée: { bg: '#fff3e0', color: '#a05000' },
-  'Réunion de club': { bg: '#EEF0FF', color: '#4A4AE8' },
-  Hackathon: { bg: '#EEF0FF', color: '#4A4AE8' },
-  Environnement: { bg: '#e8faf3', color: '#1a7a47' },
-  default: { bg: '#EEF0FF', color: '#4A4AE8' },
+// Backend dates come as "YYYY-MM-DD" (or ISO); time as "HH:MM(:SS)".
+const startOf = (e) => new Date(`${String(e.date).slice(0, 10)}T${(e.heure || '00:00').slice(0, 5)}:00`)
+const titleOf = (e) => e.titre || e.title || ''
+const clubOf = (e) => e.club_name || e.club || ''
+const catOf = (e) => e.categorie || e.category || ''
+
+// "Club Tech & Innovation" -> "TI" (skip the generic "Club" prefix so avatars stay distinguishable)
+const clubInitials = (name) =>
+  name
+    .replace(/^club\s+/i, '')
+    .split(/\s+/)
+    .filter((w) => /^\p{L}/u.test(w))
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join('') || name.trim().charAt(0).toUpperCase()
+
+const monthLabel = (key) => {
+  const [y, m] = key.split('-').map(Number)
+  const label = new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+  return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 export default function Events() {
@@ -41,27 +50,21 @@ export default function Events() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [activeCategory, setActiveCategory] = useState('Tous')
-  const [activeDate, setActiveDate] = useState('Tous')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [clubs, setClubs] = useState([])
-  const [activeClub, setActiveClub] = useState('Tous les clubs')
+  const [now, setNow] = useState(() => new Date())
 
-  useEffect(() => {
-    fetchEvents()
-  }, [])
+  const [category, setCategory] = useState('all')
+  const [month, setMonth] = useState('all')
+  const [club, setClub] = useState('all')
+  const [day, setDay] = useState(null)
+  const [search, setSearch] = useState('')
+  const [room, setRoom] = useState('')
 
   const fetchEvents = async () => {
     try {
       setLoading(true)
+      setError(null)
       const res = await getEvents()
-      // Support both { data: [...] } and direct array
-      const eventsList = Array.isArray(res.data) ? res.data : res.data.data || []
-      setEvents(eventsList)
-
-      // Extract unique clubs from events
-      const uniqueClubs = ['Tous les clubs', ...new Set(eventsList.map(e => e.club_name || e.club).filter(Boolean))]
-      setClubs(uniqueClubs)
+      setEvents(Array.isArray(res.data) ? res.data : res.data.data || [])
     } catch (err) {
       console.error(err)
       setError('Impossible de charger les événements.')
@@ -69,443 +72,372 @@ export default function Events() {
       setLoading(false)
     }
   }
-  
-  const filterEventsByDate = (event) => {
-    if (activeDate === 'Tous') return true
 
-    const eventDate = new Date(event.date)
-    const today = new Date()
-    const endOfWeek = new Date(today)
-    endOfWeek.setDate(endOfWeek.getDate() + 7)
-    const endOfMonth = new Date(today)
-    endOfMonth.setMonth(endOfMonth.getMonth() + 1)
+  useEffect(() => {
+    fetchEvents()
+  }, [])
 
-    if (activeDate === 'Cette semaine') {
-      return eventDate <= endOfWeek && eventDate >= today
-    }
-    if (activeDate === 'Ce mois') {
-      return eventDate <= endOfMonth && eventDate >= today
-    }
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30000)
+    return () => clearInterval(id)
+  }, [])
 
-    return true
+  const withStart = useMemo(
+    () =>
+      events
+        .map((e) => ({ ...e, _start: startOf(e) }))
+        .filter((e) => !Number.isNaN(e._start.getTime()))
+        .sort((a, b) => a._start - b._start),
+    [events]
+  )
+
+  const nextEvent = withStart.find((e) => e._start >= now) || null
+
+  const categories = useMemo(() => [...new Set(events.map(catOf).filter(Boolean))], [events])
+  const months = useMemo(() => [...new Set(withStart.map((e) => monthKey(e._start)))], [withStart])
+
+  const topClubs = useMemo(() => {
+    const map = new Map()
+    events.forEach((e) => {
+      const name = clubOf(e)
+      if (!name) return
+      const entry = map.get(name) || { name, id: e.club_id, count: 0 }
+      entry.count += 1
+      map.set(name, entry)
+    })
+    return [...map.values()].sort((a, b) => b.count - a.count).slice(0, 3)
+  }, [events])
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const r = room.trim().toLowerCase()
+    const list = withStart.filter((e) => {
+      if (category !== 'all' && catOf(e) !== category) return false
+      if (club !== 'all' && clubOf(e) !== club) return false
+      if (month !== 'all' && monthKey(e._start) !== month) return false
+      if (day && dayKey(e._start) !== day) return false
+      if (q && !`${titleOf(e)} ${e.description || ''}`.toLowerCase().includes(q)) return false
+      if (r && !(e.lieu || '').toLowerCase().includes(r)) return false
+      return true
+    })
+    // Upcoming first (soonest to latest), finished events last.
+    return [...list.filter((e) => e._start >= now), ...list.filter((e) => e._start < now).reverse()]
+  }, [withStart, category, club, month, day, search, room, now])
+
+  const hasFilters = category !== 'all' || month !== 'all' || club !== 'all' || day || search || room
+
+  const resetFilters = () => {
+    setCategory('all')
+    setMonth('all')
+    setClub('all')
+    setDay(null)
+    setSearch('')
+    setRoom('')
   }
 
-  const filtered = events
-    .filter(e => {
-      const cat = e.categorie || e.category || 'default'
-      return activeCategory === 'Tous' || cat === activeCategory
-    })
-    .filter(e => {
-      const club = e.club_name || e.club || ''
-      return activeClub === 'Tous les clubs' || club === activeClub
-    })
-    .filter(filterEventsByDate)
-    .filter(e => {
-      const title = (e.titre || e.title || '').toLowerCase()
-      const desc = (e.description || '').toLowerCase()
-      return title.includes(searchQuery.toLowerCase()) || desc.includes(searchQuery.toLowerCase())
-    })
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    const options = { weekday: 'long', day: 'numeric', month: 'short' }
-    return date.toLocaleDateString('fr-FR', options).replace(/^\w/, (c) => c.toUpperCase())
+  // ── Countdown ──
+  const diff = nextEvent ? Math.max(0, nextEvent._start - now) : 0
+  const cd = {
+    days: Math.floor(diff / 86400000),
+    hours: Math.floor((diff % 86400000) / 3600000),
+    minutes: Math.floor((diff % 3600000) / 60000),
   }
 
-  const formatTime = (timeString) => {
-    if (!timeString) return ''
-    return timeString.substring(0, 5)
-  }
+  // ── Calendar (month follows the selector, else the next event, else today) ──
+  const calBase = month !== 'all' ? month : monthKey(nextEvent ? nextEvent._start : now)
+  const [calY, calM] = calBase.split('-').map(Number)
+  const firstOffset = (new Date(calY, calM - 1, 1).getDay() + 6) % 7
+  const daysInMonth = new Date(calY, calM, 0).getDate()
+  const eventDays = useMemo(() => new Set(withStart.map((e) => dayKey(e._start))), [withStart])
+  const todayKey = dayKey(now)
 
-  const handleResetFilters = () => {
-  setActiveCategory('Tous');
-  setActiveDate('Tous');
-  setActiveClub('Tous les clubs');
-  setSearchQuery('');
-};
+  const fmtDayMonth = (d) => d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#EAEAEF', minHeight: '100vh' }}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700;900&display=swap" rel="stylesheet" />
+    <div className="ev">
+      <Navbar searchQuery={search} onSearch={setSearch} />
 
-      <Navbar />
+      <main className="ev__wrap">
+        {/* ───── Hero ───── */}
+        <section className="ev__hero">
+          <h1 className="ev__title">Explorez la vie étudiante &amp; scientifique à Semlalia</h1>
 
-      {/* Hero Section */}
-      <div style={{
-        background: 'linear-gradient(135deg, #1A1A2E 60%, #16213e)',
-        color: 'white',
-        padding: '56px 36px',
-        textAlign: 'center',
-      }}>
-        <h1 style={{
-          fontFamily: "'Fraunces', serif",
-          fontSize: '38px',
-          marginBottom: '12px',
-        }}>
-          Tous les événements du campus
-        </h1>
-        <p style={{
-          color: 'rgba(255,255,255,0.6)',
-          fontSize: '15px',
-          maxWidth: '460px',
-          margin: '0 auto 24px',
-        }}>
-          Conférences, soirées, ateliers, réunions de clubs — tout au même endroit.
-        </p>
-        <div style={{
-          display: 'flex',
-          maxWidth: '480px',
-          margin: '0 auto',
-          background: 'white',
-          borderRadius: '10px',
-          overflow: 'hidden',
-        }}>
-          <input
-            type="text"
-            placeholder="Rechercher un événement…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              flex: 1,
-              border: 'none',
-              padding: '13px 18px',
-              fontSize: '14px',
-              fontFamily: "'DM Sans', sans-serif",
-              color: '#1A1A2E',
-              outline: 'none',
-            }}
-          />
-          <button
-            style={{
-              background: '#E94560',
-              color: 'white',
-              border: 'none',
-              padding: '13px 22px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: "'DM Sans', sans-serif",
-            }}
-          >
-            Rechercher
-          </button>
-        </div>
-      </div>
+          {nextEvent ? (
+            <aside className="ev__countdown" aria-label="Prochain événement">
+              <div className="ev__timer" role="timer" aria-live="off">
+                <div className="ev__timer-unit">
+                  <span className="ev__timer-num">{pad(cd.days)}</span>
+                  <span className="ev__timer-label">Jours</span>
+                </div>
+                <span className="ev__timer-sep" aria-hidden="true">:</span>
+                <div className="ev__timer-unit">
+                  <span className="ev__timer-num">{pad(cd.hours)}</span>
+                  <span className="ev__timer-label">Heures</span>
+                </div>
+                <span className="ev__timer-sep" aria-hidden="true">:</span>
+                <div className="ev__timer-unit">
+                  <span className="ev__timer-num">{pad(cd.minutes)}</span>
+                  <span className="ev__timer-label">Minutes</span>
+                </div>
+              </div>
+              <h2 className="ev__countdown-title">{titleOf(nextEvent)}</h2>
+              <p className="ev__countdown-desc">
+                {nextEvent.description ? `${nextEvent.description} ` : ''}
+                {nextEvent.lieu ? `${nextEvent.lieu}, ` : ''}
+                {nextEvent._start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.
+              </p>
+              <button type="button" className="ev__countdown-btn" onClick={() => navigate(`/student/events/${nextEvent.id}`)}>
+                S'inscrire maintenant
+              </button>
+            </aside>
+          ) : (
+            <aside className="ev__countdown ev__countdown--empty">
+              <p>{loading ? 'Chargement du prochain événement…' : 'Aucun événement à venir pour le moment. Revenez bientôt !'}</p>
+            </aside>
+          )}
+        </section>
 
-      {/* Filters */}
-      <div style={{
-        display: 'flex',
-        gap: '10px',
-        padding: '16px 36px',
-        background: '#F4F4F6',
-        borderBottom: '1px solid #E0E0E6',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-      }}>
-        <span style={{ fontSize: '13px', color: '#7A7A8C', fontWeight: 600 }}>
-          Catégorie :
-        </span>
-        {EVENT_CATEGORIES.map(cat => (
-          <span
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '20px',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              border: '1.5px solid',
-              background: activeCategory === cat ? '#E94560' : 'white',
-              color: activeCategory === cat ? 'white' : '#7A7A8C',
-              borderColor: activeCategory === cat ? '#E94560' : '#E0E0E6',
-              transition: 'all 0.15s',
-            }}
-          >
-            {cat}
-          </span>
-        ))}
-
-        {/* Date filters */}
-        <span style={{ fontSize: '13px', color: '#7A7A8C', fontWeight: 600, marginLeft: '24px' }}>
-          Date :
-        </span>
-        {EVENT_DATES.map(date => (
-          <span
-            key={date}
-            onClick={() => setActiveDate(date)}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '20px',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              border: '1.5px solid',
-              background: activeDate === date ? '#E94560' : 'white',
-              color: activeDate === date ? 'white' : '#7A7A8C',
-              borderColor: activeDate === date ? '#E94560' : '#E0E0E6',
-              transition: 'all 0.15s',
-            }}
-          >
-            {date}
-          </span>
-        ))}
-
-        {/* Club filters */}
-        <span style={{ fontSize: '13px', color: '#7A7A8C', fontWeight: 600, marginLeft: '24px' }}>
-          Club :
-        </span>
-        {clubs.slice(0, 3).map(club => (
-          <span
-            key={club}
-            onClick={() => setActiveClub(club)}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '20px',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              border: '1.5px solid',
-              background: activeClub === club ? '#E94560' : 'white',
-              color: activeClub === club ? 'white' : '#7A7A8C',
-              borderColor: activeClub === club ? '#E94560' : '#E0E0E6',
-              transition: 'all 0.15s',
-            }}
-          >
-            {club}
-          </span>
-        ))}
-
-              {/* Bouton de réinitialisation */}
-      {(activeCategory !== 'Tous' || activeDate !== 'Tous' || activeClub !== 'Tous les clubs' || searchQuery !== '') && (
-        <button
-          onClick={handleResetFilters}
-          style={{
-            padding: '6px 12px',
-            borderRadius: '20px',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            border: '1.5px solid #E94560',
-            background: 'white',
-            color: '#E94560',
-            marginLeft: '10px',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#fde8ed';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'white';
-          }}
-        >
-          ✕ Réinitialiser
-        </button>
-      )}
-      </div>
-
-
-      {/* Content */}
-      <div style={{ padding: '28px 36px' }}>
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>
-            Chargement des événements...
+        {/* ───── Filters ───── */}
+        <section className="ev__filters" aria-label="Filtres">
+          <div className="ev__chips">
+            <button
+              type="button"
+              className={`ev__chip ev__chip--mint${category === 'all' ? ' is-active' : ''}`}
+              aria-pressed={category === 'all'}
+              onClick={() => setCategory('all')}
+            >
+              Tous les événements
+            </button>
+            {categories.map((cat, i) => (
+              <button
+                key={cat}
+                type="button"
+                className={`ev__chip ev__chip--${CHIP_TONES[(i + 1) % CHIP_TONES.length]}${category === cat ? ' is-active' : ''}`}
+                aria-pressed={category === cat}
+                onClick={() => setCategory(category === cat ? 'all' : cat)}
+              >
+                {cat}
+              </button>
+            ))}
+            {hasFilters && (
+              <button type="button" className="ev__chip ev__chip--reset" onClick={resetFilters}>
+                ✕ Réinitialiser
+              </button>
+            )}
           </div>
-        )}
-        {error && (
-          <div style={{
-            textAlign: 'center',
-            padding: '60px',
-            color: '#E94560',
-            fontSize: '14px',
-          }}>
-            {error}
-          </div>
-        )}
-        {!loading && !error && filtered.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>
-            Aucun événement trouvé.
-          </div>
-        )}
-        {!loading && !error && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '24px',
-          }}>
-            {filtered.map(event => {
-              const cat = event.categorie || event.category || 'default'
-              const bgColor = CATEGORY_COLORS[cat] || CATEGORY_COLORS.default
-              const emoji = CATEGORY_EMOJIS[cat] || CATEGORY_EMOJIS.default
-              const tagStyle = CATEGORY_TAGS[cat] || CATEGORY_TAGS.default
 
-          
+          <label className="ev__month">
+            <span className="sr-only" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+              Filtrer par mois
+            </span>
+            <Icon className="ev__month-cal">
+              <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+            </Icon>
+            <select value={month} onChange={(e) => { setMonth(e.target.value); setDay(null) }}>
+              <option value="all">Tous les mois</option>
+              {months.map((m) => (
+                <option key={m} value={m}>{monthLabel(m)}</option>
+              ))}
+            </select>
+            <Icon className="ev__month-chev"><path d="m6 9 6 6 6-6" /></Icon>
+          </label>
+        </section>
+
+        {/* ───── Grid + sidebar ───── */}
+        <div className="ev__layout">
+          <section className="ev__grid" aria-live="polite">
+            {loading && [0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="ev__skeleton" />)}
+
+            {!loading && error && (
+              <div className="ev__state ev__state--error">
+                {error}
+                <div><button type="button" onClick={fetchEvents}>Réessayer</button></div>
+              </div>
+            )}
+
+            {!loading && !error && filtered.length === 0 && (
+              <div className="ev__state">
+                Aucun événement ne correspond à votre recherche.
+                {hasFilters && <div><button type="button" onClick={resetFilters}>Réinitialiser les filtres</button></div>}
+              </div>
+            )}
+
+            {!loading && !error && filtered.map((event) => {
+              const cat = catOf(event)
+              const clubName = clubOf(event)
+              const past = event._start < now
+              const full = event.est_complet
+              const max = Number(event.capacite_max) || 0
+              const left = event.places_disponibles
+              const ratio = max && left != null ? Math.max(0, Math.min(1, left / max)) : null
+              const low = ratio !== null && ratio <= 0.2
 
               return (
-                <div
-                  key={event.id}
-                  style={{
-                    background: 'white',
-                    border: '1.5px solid #E0E0E6',
-                    borderRadius: '14px',
-                    overflow: 'hidden',
-                    transition: 'box-shadow 0.2s, transform 0.2s',
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.10)'
-                    e.currentTarget.style.transform = 'translateY(-2px)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.boxShadow = 'none'
-                    e.currentTarget.style.transform = 'none'
-                  }}
-                  onClick={() => navigate(`/student/events/${event.id}`)}
-                >
-                  {/* Image/Emoji Section */}
-                  <div style={{
-                    height: '130px',
-                    background: bgColor,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '42px',
-                  }}>
-                    {emoji}
+                <article key={event.id} className="ev__card" onClick={() => navigate(`/student/events/${event.id}`)}>
+                  <h3 className="ev__card-title">{titleOf(event)}</h3>
+
+                  <div className="ev__tags">
+                    {past && <span className="ev__tag ev__tag--done">Terminé</span>}
+                    {cat && <span className="ev__tag">{cat}</span>}
+                    {clubName && (
+                      event.club_id ? (
+                        <button
+                          type="button"
+                          className="ev__tag"
+                          onClick={(e) => { e.stopPropagation(); navigate(`/student/clubs/${event.club_id}`) }}
+                        >
+                          {clubName}
+                        </button>
+                      ) : (
+                        <span className="ev__tag">{clubName}</span>
+                      )
+                    )}
                   </div>
 
-                  {/* Content */}
-                  <div style={{ padding: '16px' }}>
-                    <div style={{
-                      fontSize: '11px',
-                      color: '#7A7A8C',
-                      marginBottom: '5px',
-                    }}>
-                      📅 {formatDate(event.date)} · {formatTime(event.heure)} &nbsp;|&nbsp; 📍 {event.lieu || 'Lieu TBA'}
+                  {event.description && <p className="ev__desc">{event.description}</p>}
+
+                  <div className="ev__meta">
+                    <div className="ev__badge">
+                      <span className="ev__badge-day">{event._start.getDate()}</span>
+                      <span className="ev__badge-mon">{fmtDayMonth(event._start)}</span>
                     </div>
-
-                    <div style={{
-                      fontSize: '15px',
-                      fontWeight: 700,
-                      color: '#1A1A2E',
-                      marginBottom: '6px',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 1,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                    }}>
-                      {event.titre || event.title}
-                    </div>
-
-                    <div style={{
-                      fontSize: '12px',
-                      color: '#7A7A8C',
-                      lineHeight: '1.6',
-                      marginBottom: '12px',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                    }}>
-                      {event.description}
-                    </div>
-
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}>
-                      <span style={{
-                        background: tagStyle.bg,
-                        color: tagStyle.color,
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        padding: '3px 9px',
-                        borderRadius: '4px',
-                      }}>
-                        {cat}
-                      </span>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                      }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-
-                          {/* Club cliquable — icône + nom discret (EP-170) */}
-                          {(event.club_name || event.club) && (
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                navigate(`/student/clubs/${event.club_id}`)
-                              }}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              {/* icône maison/club */}
-                              <svg
-                                width="12" height="12" viewBox="0 0 24 24"
-                                fill="none" stroke="#E94560" strokeWidth="2"
-                                strokeLinecap="round" strokeLinejoin="round"
-                                style={{ flexShrink: 0 }}
-                              >
-                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                                <polyline points="9 22 9 12 15 12 15 22"/>
-                              </svg>
-                              <span style={{
-                                fontSize: '11px',
-                                fontWeight: 600,
-                                color: '#1A1A2E',
-                              }}
-                                onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
-                                onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
-                              >
-                                {event.club_name || event.club}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Places */}
-                          <span style={{ fontSize: '11px', color: '#7A7A8C' }}>
-                            {event.places_disponibles ?? 'Ouvert à tous'} places
-                          </span>
-
+                    <div className="ev__meta-lines">
+                      <div className="ev__meta-line" title={event.lieu || ''}>
+                        <PinIcon /><span>{event.lieu || 'Lieu à confirmer'}</span>
+                      </div>
+                      {event.heure && (
+                        <div className="ev__meta-line ev__meta-line--muted">
+                          <ClockIcon /><span>{event.heure.substring(0, 5)}</span>
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            navigate(`/student/events/${event.id}`)
-                          }}
-                          style={{
-                            padding: '6px 14px',
-                            borderRadius: '8px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            border: 'none',
-                            fontFamily: "'DM Sans', sans-serif",
-                            background: '#E94560',
-                            color: 'white',
-                            transition: 'opacity 0.15s',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                        >
-                          S'inscrire
-                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {ratio !== null && (
+                    <div>
+                      <div className={`ev__cap-text${low ? ' ev__cap-text--low' : ''}`}>
+                        {left}/{max} places restantes
+                      </div>
+                      <div
+                        className="ev__cap-bar"
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={max}
+                        aria-valuenow={left}
+                        aria-label="Places restantes"
+                      >
+                        <div className={`ev__cap-fill${low ? ' ev__cap-fill--low' : ''}`} style={{ width: `${ratio * 100}%` }} />
                       </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+
+                  <button
+                    type="button"
+                    className={`ev__cta ${full && !past ? 'ev__cta--terra' : 'ev__cta--green'}`}
+                    onClick={(e) => { e.stopPropagation(); navigate(`/student/events/${event.id}`) }}
+                  >
+                    {past ? 'Voir les détails' : full ? "Liste d'attente" : "S'inscrire"}
+                  </button>
+                </article>
               )
             })}
-          </div>
-        )}
-      </div>
+          </section>
+
+          <aside className="ev__side" aria-label="Outils du campus">
+            {/* Calendar */}
+            <section className="ev__widget">
+              <h2 className="ev__widget-title">Mon Calendrier Étudiant</h2>
+              <p className="ev__cal-label">{monthLabel(calBase).toLowerCase()}</p>
+              <div className="ev__cal">
+                {DOW.map((d, i) => <div key={i} className="ev__cal-dow" aria-hidden="true">{d}</div>)}
+                {Array.from({ length: firstOffset }, (_, i) => <div key={`b${i}`} />)}
+                {Array.from({ length: daysInMonth }, (_, i) => {
+                  const n = i + 1
+                  const key = `${calBase}-${pad(n)}`
+                  const has = eventDays.has(key)
+                  const cls = [
+                    'ev__cal-day',
+                    has && 'ev__cal-day--event',
+                    key === todayKey && 'ev__cal-day--today',
+                    day === key && 'ev__cal-day--selected',
+                  ].filter(Boolean).join(' ')
+                  return has ? (
+                    <button
+                      key={key}
+                      type="button"
+                      className={cls}
+                      aria-pressed={day === key}
+                      aria-label={`${n} ${monthLabel(calBase)} : événement`}
+                      onClick={() => setDay(day === key ? null : key)}
+                    >
+                      {n}
+                    </button>
+                  ) : (
+                    <span key={key} className={cls}>{n}</span>
+                  )
+                })}
+              </div>
+            </section>
+
+            {/* Active clubs */}
+            <section className="ev__widget">
+              <h2 className="ev__widget-title">Clubs Actifs du Mois</h2>
+              {topClubs.length === 0 ? (
+                <p className="ev__cal-label" style={{ textTransform: 'none' }}>Aucun club actif pour le moment.</p>
+              ) : (
+                <div className="ev__clubs">
+                  {topClubs.map((c) => (
+                    <div key={c.name} className="ev__club">
+                      <button
+                        type="button"
+                        className={`ev__club-avatar${club === c.name ? ' is-active' : ''}`}
+                        aria-pressed={club === c.name}
+                        aria-label={`Filtrer les événements de ${c.name}`}
+                        onClick={() => setClub(club === c.name ? 'all' : c.name)}
+                      >
+                        {clubInitials(c.name)}
+                      </button>
+                      <span className="ev__club-name">{c.name}</span>
+                      {c.id && (
+                        <button type="button" className="ev__club-link" onClick={() => navigate(`/student/clubs/${c.id}`)}>
+                          Rejoindre
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button type="button" className="ev__side-btn" onClick={() => navigate('/student/clubs')}>
+                Tous les clubs
+              </button>
+            </section>
+
+            {/* Room locator */}
+            <section className="ev__widget">
+              <h2 className="ev__widget-title">Quick room locator</h2>
+              <div className="ev__room-input">
+                <Icon><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></Icon>
+                <input
+                  type="search"
+                  value={room}
+                  onChange={(e) => setRoom(e.target.value)}
+                  placeholder="Recherche campus..."
+                  aria-label="Rechercher un lieu sur le campus"
+                />
+              </div>
+              <svg className="ev__map" viewBox="0 0 200 130" role="img" aria-label="Plan du campus">
+                <rect width="200" height="130" fill="#eef1ee" />
+                <path d="M0 96c30-10 50-30 90-26s70 14 110-8v68H0Z" fill="#cfe4d3" />
+                <rect x="126" y="12" width="52" height="34" rx="4" fill="#dde6df" />
+                <rect x="20" y="16" width="40" height="28" rx="4" fill="#dde6df" />
+                <path d="M0 58h200M84 0v130M150 0l-30 130M0 24l100 30" stroke="#fff" strokeWidth="6" fill="none" />
+                <path d="M100 88c0-9 12-18 12-30a12 12 0 1 0-24 0c0 12 12 21 12 30Z" fill="#a85a28" transform="translate(-4 -6)" />
+                <circle cx="96" cy="46" r="4.5" fill="#fff" />
+              </svg>
+            </section>
+          </aside>
+        </div>
+      </main>
     </div>
   )
 }

@@ -3,17 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import { getClub, joinClub, leaveClub } from '../../api/clubs'
 import { startConversation } from '../../api/messages'
+import { Icon } from './StudentIcons'
+import './ClubDetail.css'
 
-const MEMBER_COLORS = ['#E94560', '#1A1A2E', '#4CAF50', '#FF9800', '#2196F3', '#9C27B0']
+const MEMBER_TONES = 4
 
-const CATEGORY_EMOJIS = {
-  Conférence: '🎤',
-  Atelier: '🎨',
-  Soirée: '🎭',
-  'Réunion de club': '👥',
-  Hackathon: '👨‍💻',
-  Environnement: '🌱',
-  default: '📅',
+const CATEGORY_ICONS = {
+  Conférence: 'mic',
+  Atelier: 'palette',
+  Soirée: 'sparkles',
+  'Réunion de club': 'users',
+  Hackathon: 'code',
+  Environnement: 'leaf',
+  default: 'calendar',
 }
 
 const formatEventDate = (date, heure) => {
@@ -100,16 +102,16 @@ export default function ClubDetail() {
   }
 
   if (loading) return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#EAEAEF', minHeight: '100vh' }}>
+    <div className="cd">
       <Navbar />
-      <div style={{ textAlign: 'center', padding: '80px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
+      <div className="cd__state" role="status">Chargement...</div>
     </div>
   )
 
   if (error || !club) return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#EAEAEF', minHeight: '100vh' }}>
+    <div className="cd">
       <Navbar />
-      <div style={{ textAlign: 'center', padding: '80px', color: '#E94560', fontSize: '14px' }}>{error || 'Club introuvable.'}</div>
+      <div className="cd__state cd__state--error" role="alert">{error || 'Club introuvable.'}</div>
     </div>
   )
 
@@ -120,267 +122,150 @@ export default function ClubDetail() {
   const anneeCreation = club.created_at ? new Date(club.created_at).getFullYear() : null
   const evenements = club.evenements || []
 
+  const joinLabel = joining
+    ? '...'
+    : club.is_member
+      ? (<><Icon name="check" size={16} />Membre</>)
+      : club.is_pending
+        ? (<><Icon name="hourglass" size={16} />Demande en attente</>)
+        : 'Rejoindre ce club'
+  const joinTone = club.is_member ? 'member' : club.is_pending ? 'pending' : 'join'
+
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#EAEAEF', minHeight: '100vh' }}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700;900&display=swap" rel="stylesheet" />
+    <div className="cd">
       <Navbar />
 
-      {/* ── Hero Banner ── */}
-      <div style={{
-        background: '#1A1A2E', padding: '40px 48px',
-        display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
-          <div style={{
-            width: '90px', height: '90px', borderRadius: '16px', background: '#2A2A4E',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '42px', flexShrink: 0,
-          }}>
-            {club.emoji || '🏛️'}
-          </div>
-          <div>
-            <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: '28px', color: 'white', marginBottom: '6px' }}>
-              {club.nom}
-            </h1>
-            <div style={{ fontSize: '13px', color: '#7A7A8C', marginBottom: '20px' }}>
-              {club.categorie}{anneeCreation ? ` · Fondé en ${anneeCreation}` : ''}
+      <main className="cd__wrap">
+        <button type="button" className="cd__back" onClick={() => navigate('/student/clubs')}>
+          <Icon name="arrowLeft" size={16} />
+          Retour aux clubs
+        </button>
+
+        {/* ── Hero ── */}
+        <section className="cd__hero">
+          <div className="cd__hero-main">
+            <div className="cd__logo">
+              {club.emoji || <Icon name="landmark" size={40} />}
             </div>
-            {/* ── Stats : Membres + Événements organisés ── */}
-            <div style={{ display: 'flex', gap: '36px' }}>
-              <div>
-                <div style={{ fontSize: '26px', fontWeight: 700, color: 'white' }}>{totalMembres}</div>
-                <div style={{ fontSize: '12px', color: '#7A7A8C' }}>Membres</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '26px', fontWeight: 700, color: 'white' }}>
-                  {club.evenements_count ?? 0}
-                </div>
-                <div style={{ fontSize: '12px', color: '#7A7A8C' }}>Événements organisés</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
-          <button
-            onClick={handleMessageOrganizer}
-            disabled={messaging}
-            style={{
-              padding: '14px 24px', borderRadius: '12px', fontSize: '14px',
-              fontWeight: 700,
-              cursor: messaging ? 'wait' : 'pointer',
-              fontFamily: "'DM Sans', sans-serif",
-              background: 'white',
-              color: '#1A1A2E',
-              border: '2px solid #E0E0E6',
-              transition: 'all 0.2s', opacity: messaging ? 0.7 : 1,
-            }}
-            onMouseEnter={e => {
-              if (!messaging) {
-                e.currentTarget.style.background = '#1A1A2E'
-                e.currentTarget.style.color = 'white'
-                e.currentTarget.style.borderColor = '#1A1A2E'
-              }
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'white'
-              e.currentTarget.style.color = '#1A1A2E'
-              e.currentTarget.style.borderColor = '#E0E0E6'
-            }}
-          >
-            {messaging ? '...' : '✉️ Contacter'}
-          </button>
-          <button
-            onClick={club.is_member ? handleJoinLeave : club.is_pending ? undefined : handleJoinLeave}
-            disabled={joining || club.is_pending}
-            style={{
-              padding: '14px 32px', borderRadius: '12px', fontSize: '14px',
-              fontWeight: 700,
-              cursor: joining ? 'wait' : club.is_pending ? 'default' : 'pointer',
-              fontFamily: "'DM Sans', sans-serif", flexShrink: 0,
-              background: club.is_member
-                ? 'transparent'
-                : club.is_pending
-                  ? '#F4F4F6'
-                  : 'linear-gradient(135deg, #E94560, #C0392B)',
-              color: club.is_member ? '#E94560' : club.is_pending ? '#7A7A8C' : 'white',
-              border: club.is_member
-                ? '2px solid #E94560'
-                : club.is_pending
-                  ? '2px solid #E0E0E6'
-                  : '2px solid transparent',
-              boxShadow: club.is_member || club.is_pending ? 'none' : '0 4px 14px rgba(233,69,96,0.4)',
-              transition: 'all 0.2s', opacity: joining ? 0.7 : 1,
-            }}
-          >
-            {joining ? '...' : club.is_member ? '✓ Membre' : club.is_pending ? '⏳ Demande en attente' : 'Rejoindre ce club'}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Body ── */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 300px',
-        gap: '24px', padding: '28px 48px', alignItems: 'start',
-      }}>
-
-        {/* Colonne gauche */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-          {/* Description */}
-          <div style={{
-            background: 'white', borderRadius: '14px',
-            padding: '28px', border: '1.5px solid #E0E0E6',
-          }}>
-            <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: '#1A1A2E', marginBottom: '12px' }}>
-              Description du club
-            </h2>
-            <p style={{ fontSize: '14px', color: '#555', lineHeight: '1.75' }}>
-              {club.description || 'Aucune description disponible.'}
-            </p>
-          </div>
-
-          {/* ── Prochains événements */}
-          <div style={{
-            background: 'white', borderRadius: '14px',
-            padding: '28px', border: '1.5px solid #E0E0E6',
-          }}>
-            <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: '#1A1A2E', marginBottom: '16px' }}>
-              Prochains événements du club
-            </h2>
-
-            {evenements.length === 0 ? (
-              <p style={{ fontSize: '13px', color: '#7A7A8C' }}>
-                Aucun événement à venir pour ce club.
+            <div className="cd__hero-text">
+              <h1 className="cd__title">{club.nom}</h1>
+              <p className="cd__sub">
+                {club.categorie}{anneeCreation ? ` · Fondé en ${anneeCreation}` : ''}
               </p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {evenements.map(event => {
-                  const cat = event.categorie || 'default'
-                  const emoji = CATEGORY_EMOJIS[cat] || CATEGORY_EMOJIS.default
-                  return (
-                    <div
-                      key={event.id}
-                      style={{
-                        display: 'flex', alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '14px 16px',
-                        border: '1.5px solid #E0E0E6',
-                        borderRadius: '10px',
-                        transition: 'background 0.15s',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#F4F4F6'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'white'}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        {/* Icône catégorie */}
-                        <div style={{
-                          width: '38px', height: '38px', borderRadius: '8px',
-                          background: '#F4F4F6', display: 'flex',
-                          alignItems: 'center', justifyContent: 'center',
-                          fontSize: '18px', flexShrink: 0,
-                        }}>
-                          {emoji}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '14px', fontWeight: 600, color: '#1A1A2E' }}>
-                            {event.titre}
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#7A7A8C', marginTop: '2px' }}>
-                            {formatEventDate(event.date, event.heure)}
-                            {event.lieu ? ` · ${event.lieu}` : ''}
-                          </div>
-                        </div>
-                      </div>
+              {/* ── Stats : Membres + Événements organisés ── */}
+              <div className="cd__stats">
+                <div>
+                  <div className="cd__stat-num">{totalMembres}</div>
+                  <div className="cd__stat-label">Membres</div>
+                </div>
+                <div>
+                  <div className="cd__stat-num">{club.evenements_count ?? 0}</div>
+                  <div className="cd__stat-label">Événements organisés</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-                      {/* Bouton Voir → navigate vers EventDetail */}
-                      <button
-                        onClick={() => navigate(`/student/events/${event.id}`)}
-                        style={{
-                          padding: '7px 18px', borderRadius: '8px',
-                          fontSize: '12px', fontWeight: 600,
-                          cursor: 'pointer', border: '1.5px solid #E0E0E6',
-                          background: 'white', color: '#1A1A2E',
-                          fontFamily: "'DM Sans', sans-serif",
-                          flexShrink: 0,
-                          transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.background = '#1A1A2E'
-                          e.currentTarget.style.color = 'white'
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.background = 'white'
-                          e.currentTarget.style.color = '#1A1A2E'
-                        }}
-                      >
-                        Voir
-                      </button>
-                    </div>
+          <div className="cd__actions">
+            <button
+              type="button"
+              className="cd__btn cd__btn--ghost"
+              onClick={handleMessageOrganizer}
+              disabled={messaging}
+            >
+              {messaging ? '...' : (<><Icon name="mail" size={16} />Contacter</>)}
+            </button>
+            <button
+              type="button"
+              className={`cd__btn cd__btn--${joinTone}`}
+              onClick={club.is_member ? handleJoinLeave : club.is_pending ? undefined : handleJoinLeave}
+              disabled={joining || club.is_pending}
+            >
+              {joinLabel}
+            </button>
+          </div>
+        </section>
+
+        {/* ── Body ── */}
+        <div className="cd__layout">
+          {/* Colonne gauche */}
+          <div className="cd__col">
+            {/* Description */}
+            <section className="cd__panel">
+              <h2 className="cd__h2">Description du club</h2>
+              <p className="cd__text">{club.description || 'Aucune description disponible.'}</p>
+            </section>
+
+            {/* ── Prochains événements */}
+            <section className="cd__panel">
+              <h2 className="cd__h2">Prochains événements du club</h2>
+
+              {evenements.length === 0 ? (
+                <p className="cd__muted">Aucun événement à venir pour ce club.</p>
+              ) : (
+                <ul className="cd__events">
+                  {evenements.map(event => {
+                    const cat = event.categorie || 'default'
+                    const icon = CATEGORY_ICONS[cat] || CATEGORY_ICONS.default
+                    return (
+                      <li key={event.id} className="cd__event">
+                        <div className="cd__event-main">
+                          <div className="cd__event-ico"><Icon name={icon} size={18} /></div>
+                          <div className="cd__event-info">
+                            <div className="cd__event-title">{event.titre}</div>
+                            <div className="cd__event-meta">
+                              {formatEventDate(event.date, event.heure)}
+                              {event.lieu ? ` · ${event.lieu}` : ''}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Bouton Voir → navigate vers EventDetail */}
+                        <button
+                          type="button"
+                          className="cd__btn cd__btn--outline cd__btn--sm"
+                          onClick={() => navigate(`/student/events/${event.id}`)}
+                          aria-label={`Voir l'événement ${event.titre}`}
+                        >
+                          Voir
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </section>
+          </div>
+
+          {/* Sidebar membres */}
+          <aside className="cd__side">
+            <h3 className="cd__side-title">Membres publics</h3>
+            {membresPublics.length === 0 ? (
+              <p className="cd__muted">Aucun membre public.</p>
+            ) : (
+              <ul className="cd__members">
+                {membresPublics.map((m, i) => {
+                  const fullName = `${m.prenom || ''} ${m.nom || ''}`.trim() || 'Membre'
+                  const initial = fullName[0]?.toUpperCase() || '?'
+                  const role = m.pivot?.role === 'responsable' ? 'Responsable' : 'Membre'
+                  return (
+                    <li key={m.id || i} className="cd__member">
+                      <div className={`cd__mav cd__mav--${i % MEMBER_TONES}`}>{initial}</div>
+                      <div>
+                        <div className="cd__member-name">{fullName}</div>
+                        <div className="cd__member-role">{role}</div>
+                      </div>
+                    </li>
                   )
                 })}
-              </div>
+              </ul>
             )}
-          </div>
-
-          {/* Retour */}
-          <button
-            onClick={() => navigate('/student/clubs')}
-            style={{
-              alignSelf: 'flex-start', padding: '10px 20px',
-              borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-              cursor: 'pointer', border: '1.5px solid #E0E0E6',
-              background: 'white', color: '#7A7A8C',
-              fontFamily: "'DM Sans', sans-serif",
-            }}
-          >
-            ← Retour aux clubs
-          </button>
+            {resteMembres > 0 && (
+              <div className="cd__more">+ {resteMembres} autres membres…</div>
+            )}
+          </aside>
         </div>
-
-        {/* Sidebar membres*/}
-        <div style={{
-          background: 'white', borderRadius: '14px',
-          padding: '24px', border: '1.5px solid #E0E0E6',
-        }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A1A2E', marginBottom: '18px' }}>
-            Membres publics
-          </h3>
-          {membresPublics.length === 0 ? (
-            <p style={{ fontSize: '13px', color: '#7A7A8C' }}>Aucun membre public.</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {membresPublics.map((m, i) => {
-                const fullName = `${m.prenom || ''} ${m.nom || ''}`.trim() || 'Membre'
-                const initial = fullName[0]?.toUpperCase() || '?'
-                const role = m.pivot?.role === 'responsable' ? 'Responsable' : 'Membre'
-                return (
-                  <div key={m.id || i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                      width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
-                      background: MEMBER_COLORS[i % MEMBER_COLORS.length],
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'white', fontSize: '15px', fontWeight: 700,
-                    }}>
-                      {initial}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A2E' }}>{fullName}</div>
-                      <div style={{ fontSize: '11px', color: '#7A7A8C' }}>{role}</div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-          {resteMembres > 0 && (
-            <div style={{ fontSize: '12px', color: '#7A7A8C', marginTop: '16px' }}>
-              + {resteMembres} autres membres…
-            </div>
-          )}
-        </div>
-      </div>
+      </main>
     </div>
   )
 }

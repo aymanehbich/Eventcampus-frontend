@@ -1,32 +1,34 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Register from './pages/auth/Register'
-import Login from './pages/auth/Login'
-import GoogleCallback from './pages/auth/GoogleCallback'
-import StudentDashboard from './pages/student/Dashboard'
+const Register = lazy(() => import('./pages/auth/Register'))
+const Login = lazy(() => import('./pages/auth/Login'))
+const GoogleCallback = lazy(() => import('./pages/auth/GoogleCallback'))
+const StudentDashboard = lazy(() => import('./pages/student/Dashboard'))
 
 import ProtectedRoute from './router/ProtectedRoute'
-import Profile from './pages/student/Profile'
-import CreateClub from './pages/organiser/CreateClub'
-import Clubs from './pages/student/Clubs'
-import ClubDetail from './pages/student/ClubDetail'
-import StudentMessaging from './pages/student/StudentMessaging'
-import Events from './pages/student/Events'
-import EventDetail from './pages/student/EventDetail'
-import EventInscrits from './pages/organiser/EventInscrits'
-import MesEvenements from './pages/organiser/MesEvenements'
-import CreateEvent from './pages/organiser/CreateEvent'
-import EditEvent from './pages/organiser/EditEvent'
-import Adhesions from './pages/organiser/Adhesions'
-import Messaging from './pages/organiser/Messaging'
-import AdminLogin from './pages/admin/AdminLogin'
-import AdminDashboard from './pages/admin/AdminDashboard'
-import MesClubs from './pages/organiser/MesClubs'
-import EditClub from './pages/organiser/EditClub'
-import OrganizerDashboard from './pages/organiser/OrganizerDashboard'
+const Profile = lazy(() => import('./pages/student/Profile'))
+const CreateClub = lazy(() => import('./pages/organiser/CreateClub'))
+const Clubs = lazy(() => import('./pages/student/Clubs'))
+const ClubDetail = lazy(() => import('./pages/student/ClubDetail'))
+const StudentMessaging = lazy(() => import('./pages/student/StudentMessaging'))
+const Events = lazy(() => import('./pages/student/Events'))
+const EventDetail = lazy(() => import('./pages/student/EventDetail'))
+const EventInscrits = lazy(() => import('./pages/organiser/EventInscrits'))
+const MesEvenements = lazy(() => import('./pages/organiser/MesEvenements'))
+const CreateEvent = lazy(() => import('./pages/organiser/CreateEvent'))
+const EditEvent = lazy(() => import('./pages/organiser/EditEvent'))
+const Adhesions = lazy(() => import('./pages/organiser/Adhesions'))
+const Messaging = lazy(() => import('./pages/organiser/Messaging'))
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'))
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const MesClubs = lazy(() => import('./pages/organiser/MesClubs'))
+const EditClub = lazy(() => import('./pages/organiser/EditClub'))
+const OrganizerDashboard = lazy(() => import('./pages/organiser/OrganizerDashboard'))
 
 function App() {
   return (
     <BrowserRouter>
+      <Suspense fallback={<div role="status" aria-live="polite" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: '#5f645d', fontFamily: 'var(--ec-font)' }}>Chargement…</div>}>
       <Routes>
         {/* Auth */}
         <Route path="/register" element={<Register />} />
@@ -192,6 +194,7 @@ function App() {
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

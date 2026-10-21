@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getEvent, updateEvent, getEventCategories } from '../../api/events'
 import { getOrganizerClubs } from '../../api/clubs'
+import DashboardLayout from '../../components/DashboardLayout'
+import { ArrowLeftIcon, SaveIcon, XIcon, CalendarIcon, PinIcon, UsersIcon, ClubIcon, EditIcon, CheckIcon } from './OrganiserIcons'
+import './Organiser.css'
 
 const NEW_CAT_SENTINEL = '__nouvelle__'
 
@@ -11,13 +14,13 @@ export default function EditEvent() {
   const [loading, setLoading] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [fieldErrors, setFieldErrors] = useState({})
-  const [clubs, setClubs] = useState([])
-  const [categories, setCategories] = useState([])
+  const [categories, setCategories] = useState([])       // [{nom, emoji}]
   const [isCustomCat, setIsCustomCat] = useState(false)
   const [customCat, setCustomCat] = useState('')
   const [customEmoji, setCustomEmoji] = useState('📅')
   const [customCatError, setCustomCatError] = useState(null)
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [clubs, setClubs] = useState([])
   const [formData, setFormData] = useState({
     titre: '', description: '', date: '', heure: '',
     date_fin: '', heure_fin: '', lieu: '', categorie: '',
@@ -102,68 +105,33 @@ export default function EditEvent() {
     }
   }
 
-  const fe = (name) => { const e = fieldErrors[name]; return Array.isArray(e) ? e[0] : e }
-
-  const inputStyle = (name) => ({
-    width: '100%', padding: '10px 14px', borderRadius: '8px', fontSize: '14px',
-    border: fieldErrors[name] ? '1.5px solid #E94560' : '1.5px solid #E0E0E6',
-    color: '#1A1A2E', background: 'white', outline: 'none',
-    boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", transition: 'border-color 0.15s',
-  })
-
-  const s = {
-    layout: { display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" },
-    sidebar: { background: '#1A1A2E', padding: '24px 0', position: 'relative' },
-    logo: { fontFamily: "'Fraunces', serif", fontSize: '18px', color: 'white', padding: '0 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '16px' },
-    navItem: { padding: '11px 20px', fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.55)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' },
-    navActive: { padding: '11px 20px', fontSize: '13px', fontWeight: 500, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(233,69,96,0.15)', borderRight: '3px solid #E94560' },
-    main: { padding: '32px', background: '#F4F4F6', minHeight: '100vh' },
-    label: { display: 'block', fontSize: '13px', fontWeight: 600, color: '#1A1A2E', marginBottom: '6px' },
-    fieldError: { fontSize: '12px', color: '#E94560', marginTop: '4px' },
+  const fe = (name) => {
+    const e = fieldErrors[name]
+    return Array.isArray(e) ? e[0] : e
   }
+  const errId = (name) => `ev-${name}-err`
+  const aria = (name) => ({
+    'aria-invalid': fe(name) ? 'true' : undefined,
+    'aria-describedby': fe(name) ? errId(name) : undefined,
+  })
+  const cls = (base, name) => `${base}${fe(name) ? ' is-error' : ''}`
+  const fieldErr = (name) => (fe(name) ? <span id={errId(name)} className="ec-error" role="alert">{fe(name)}</span> : null)
 
-  const Sidebar = () => (
-    <div style={s.sidebar}>
-      <div style={s.logo}>Event<span style={{ color: '#E94560' }}>Campus</span></div>
-      <div style={s.navItem} onClick={() => navigate('/organiser/dashboard')}>📊 Dashboard</div>
-      <div style={s.navItem} onClick={() => navigate('/organiser/clubs')}>🏛️ Mon club</div>
-      <div style={s.navActive}>📅 Mes événements</div>
-      <div style={s.navItem} onClick={() => navigate('/organiser/adhesions')}>👥 Membres</div>
-      <div style={s.navItem} onClick={() => navigate('/organiser/messages')}>✉️ Messages</div>
-      <div style={{ position: 'absolute', bottom: '24px', left: 0, width: '220px', boxSizing: 'border-box', padding: '0 16px' }}>
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
-          <button
-            onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login') }}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '11px 14px', borderRadius: '10px', border: '1px solid rgba(233,69,96,0.35)',
-              background: 'rgba(233,69,96,0.1)', color: '#E94560',
-              fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-              fontFamily: "'DM Sans', sans-serif", transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#E94560'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = '#E94560' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(233,69,96,0.1)'; e.currentTarget.style.color = '#E94560'; e.currentTarget.style.borderColor = 'rgba(233,69,96,0.35)' }}
-          >
-            <span style={{ fontSize: '16px' }}>🚪</span> Déconnexion
-          </button>
-        </div>
-      </div>
-    </div>
+  const backButton = (
+    <button type="button" className="ec-btn ec-btn--ghost" onClick={() => navigate('/organiser/events')}>
+      <ArrowLeftIcon size={16} /> Retour aux événements
+    </button>
   )
 
   if (pageLoading) return (
-    <div style={s.layout}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700;900&display=swap" rel="stylesheet" />
-      <Sidebar />
-      <div style={s.main}>
-        <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Chargement de l'événement...</div>
-      </div>
-    </div>
+    <DashboardLayout active="events" title="Modifier l'événement">
+      <div className="ec-state" role="status" aria-live="polite">Chargement de l'événement...</div>
+    </DashboardLayout>
   )
 
   const selectedClub = clubs.find(c => String(c.id) === String(formData.club_id))
   const selectedCat = categories.find(c => c.nom === formData.categorie)
-  const eventEmoji = isCustomCat ? customEmoji : (selectedCat?.emoji || '📅')
+  const eventEmoji = isCustomCat ? customEmoji : selectedCat?.emoji
 
   const formatPreviewDate = (date, heure) => {
     if (!date) return null
@@ -173,236 +141,190 @@ export default function EditEvent() {
     return heure ? `${day} · ${heure.substring(0, 5)}` : day
   }
 
+  const customOk = customCat && !customCatError
+
   return (
-    <div style={s.layout}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700;900&display=swap" rel="stylesheet" />
-      <Sidebar />
+    <DashboardLayout
+      active="events"
+      title="Modifier l'événement"
+      subtitle="Modifiez les informations et sauvegardez."
+      actions={backButton}
+    >
+      <div className="og__form-layout">
+        {/* Formulaire */}
+        <div className="ec-card">
+          {error && <div className="ec-alert ec-alert--error og__alert" role="alert">{error}</div>}
 
-      {/* Main */}
-      <div style={s.main}>
-        <div style={{ marginBottom: '28px' }}>
-          <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', color: '#1A1A2E', margin: 0 }}>Modifier l'événement</h2>
-          <div style={{ fontSize: '13px', color: '#7A7A8C', marginTop: '4px' }}>Modifiez les informations et sauvegardez.</div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '20px', alignItems: 'start' }}>
-
-          {/* Formulaire */}
-          <div style={{ background: 'white', borderRadius: '14px', border: '1.5px solid #E0E0E6', padding: '28px' }}>
-            {error && (
-              <div style={{ background: '#FFE6E6', color: '#E94560', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', marginBottom: '20px' }}>
-                {error}
+          <form className="og__form" onSubmit={handleSubmit}>
+            <div className="og__grid2">
+              {/* Club */}
+              <div className="ec-field">
+                <label className="ec-label" htmlFor="ev-club_id">Club associé <span className="og__req" aria-hidden="true">*</span></label>
+                <select id="ev-club_id" name="club_id" value={formData.club_id} onChange={handleChange} className={cls('ec-select', 'club_id')} {...aria('club_id')}>
+                  <option value="">Sélectionner un club</option>
+                  {clubs.map(c => <option key={c.id} value={c.id}>{c.nom || c.name}</option>)}
+                </select>
+                {fieldErr('club_id')}
               </div>
-            )}
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-
-              {/* Club + Catégorie */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label style={s.label}>Club associé *</label>
-                  <select name="club_id" value={formData.club_id} onChange={handleChange} style={{ ...inputStyle('club_id'), cursor: 'pointer' }}>
-                    <option value="">Sélectionner un club</option>
-                    {clubs.map(c => <option key={c.id} value={c.id}>{c.nom || c.name}</option>)}
-                  </select>
-                  {fe('club_id') && <div style={s.fieldError}>{fe('club_id')}</div>}
-                </div>
-                <div>
-                  <label style={s.label}>Catégorie *</label>
-                  {!isCustomCat ? (
-                    <select
-                      name="categorie"
-                      value={formData.categorie}
-                      onChange={handleChange}
-                      style={{ ...inputStyle('categorie'), cursor: 'pointer' }}
-                    >
+              {/* Catégorie */}
+              <div className="ec-field">
+                {!isCustomCat ? (
+                  <>
+                    <label className="ec-label" htmlFor="ev-categorie">Catégorie <span className="og__req" aria-hidden="true">*</span></label>
+                    <select id="ev-categorie" name="categorie" value={formData.categorie} onChange={handleChange} className={cls('ec-select', 'categorie')} {...aria('categorie')}>
                       <option value="">Sélectionner une catégorie</option>
                       {categories.map(c => (
                         <option key={c.nom} value={c.nom}>{c.emoji ? `${c.emoji} ` : ''}{c.nom}</option>
                       ))}
-                      <option value={NEW_CAT_SENTINEL}>➕ Créer une nouvelle catégorie</option>
+                      <option value={NEW_CAT_SENTINEL}>+ Créer une nouvelle catégorie</option>
                     </select>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                        <input
-                          type="text"
-                          value={customEmoji}
-                          onChange={e => setCustomEmoji(e.target.value)}
-                          maxLength={8}
-                          placeholder="📅"
-                          style={{ ...inputStyle(null), width: '62px', flexShrink: 0, textAlign: 'center', fontSize: '20px', padding: '8px 6px' }}
-                        />
-                        <div style={{ flex: 1, position: 'relative' }}>
-                          <input
-                            type="text"
-                            value={customCat}
-                            onChange={handleCustomCatChange}
-                            placeholder="Nom de la nouvelle catégorie…"
-                            maxLength={100}
-                            autoFocus
-                            style={{
-                              ...inputStyle('categorie'),
-                              borderColor: customCatError ? '#E94560' : customCat && !customCatError ? '#4CAF50' : '#E0E0E6',
-                              paddingRight: '36px',
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => { setIsCustomCat(false); setCustomCat(''); setCustomEmoji('📅'); setCustomCatError(null); setFormData(prev => ({ ...prev, categorie: '' })) }}
-                            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#7A7A8C', lineHeight: 1 }}
-                            title="Annuler"
-                          >✕</button>
-                        </div>
-                      </div>
-                      {customCatError
-                        ? <div style={{ fontSize: '12px', color: '#E94560' }}>{customCatError}</div>
-                        : customCat && !customCatError
-                          ? <div style={{ fontSize: '12px', color: '#4CAF50' }}>✓ Nouvelle catégorie : <strong>{customEmoji} {customCat.trim()}</strong></div>
-                          : <div style={{ fontSize: '11px', color: '#7A7A8C' }}>Saisissez l'emoji puis le nom de la catégorie</div>
-                      }
+                  </>
+                ) : (
+                  <>
+                    <label className="ec-label" htmlFor="ev-categorie-new">Nouvelle catégorie <span className="og__req" aria-hidden="true">*</span></label>
+                    <div className="og__catrow">
+                      <input
+                        type="text"
+                        value={customEmoji}
+                        onChange={e => setCustomEmoji(e.target.value)}
+                        maxLength={8}
+                        placeholder="📅"
+                        aria-label="Emoji de la catégorie"
+                        className="ec-input og__emoji"
+                      />
+                      <input
+                        id="ev-categorie-new"
+                        type="text"
+                        value={customCat}
+                        onChange={handleCustomCatChange}
+                        placeholder="Nom de la nouvelle catégorie…"
+                        maxLength={100}
+                        autoFocus
+                        className={`ec-input og__catname${customCatError || fe('categorie') ? ' is-error' : customOk ? ' og__input-ok' : ''}`}
+                        aria-invalid={customCatError || fe('categorie') ? 'true' : undefined}
+                        aria-describedby="ev-categorie-hint"
+                      />
+                      <button
+                        type="button"
+                        className="og__icon-btn"
+                        aria-label="Annuler la nouvelle catégorie"
+                        title="Annuler"
+                        onClick={() => { setIsCustomCat(false); setCustomCat(''); setCustomEmoji('📅'); setCustomCatError(null); setFormData(prev => ({ ...prev, categorie: '' })) }}
+                      >
+                        <XIcon size={18} />
+                      </button>
                     </div>
-                  )}
-                  {fe('categorie') && <div style={s.fieldError}>{fe('categorie')}</div>}
-                </div>
+                    <div id="ev-categorie-hint" aria-live="polite">
+                      {customCatError
+                        ? <span className="ec-error">{customCatError}</span>
+                        : customOk
+                          ? <span className="og__success"><CheckIcon size={14} /> Nouvelle catégorie : <strong>{customEmoji} {customCat.trim()}</strong></span>
+                          : <span className="ec-help">Saisissez l'emoji puis le nom de la catégorie</span>}
+                    </div>
+                  </>
+                )}
+                {fieldErr('categorie')}
               </div>
 
               {/* Titre */}
-              <div>
-                <label style={s.label}>Titre de l'événement *</label>
-                <input type="text" name="titre" value={formData.titre} onChange={handleChange}
-                  placeholder="Ex : Conférence sur l'IA" style={inputStyle('titre')}
-                  onFocus={e => !fieldErrors.titre && (e.target.style.borderColor = '#E94560')}
-                  onBlur={e => !fieldErrors.titre && (e.target.style.borderColor = '#E0E0E6')}
-                />
-                {fe('titre') && <div style={s.fieldError}>{fe('titre')}</div>}
+              <div className="ec-field og__span2">
+                <label className="ec-label" htmlFor="ev-titre">Titre de l'événement <span className="og__req" aria-hidden="true">*</span></label>
+                <input id="ev-titre" type="text" name="titre" value={formData.titre} onChange={handleChange}
+                  placeholder="Ex : Conférence sur l'IA" className={cls('ec-input', 'titre')} {...aria('titre')} />
+                {fieldErr('titre')}
               </div>
 
               {/* Description */}
-              <div>
-                <label style={s.label}>Description *</label>
-                <textarea name="description" value={formData.description} onChange={handleChange}
-                  placeholder="Décrivez votre événement…" rows={3}
-                  style={{ ...inputStyle('description'), resize: 'vertical', lineHeight: '1.6' }}
-                  onFocus={e => !fieldErrors.description && (e.target.style.borderColor = '#E94560')}
-                  onBlur={e => !fieldErrors.description && (e.target.style.borderColor = '#E0E0E6')}
-                />
-                {fe('description') && <div style={s.fieldError}>{fe('description')}</div>}
+              <div className="ec-field og__span2">
+                <label className="ec-label" htmlFor="ev-description">Description <span className="og__req" aria-hidden="true">*</span></label>
+                <textarea id="ev-description" name="description" value={formData.description} onChange={handleChange}
+                  placeholder="Décrivez votre événement…" rows={3} className={cls('ec-textarea', 'description')} {...aria('description')} />
+                {fieldErr('description')}
               </div>
 
               {/* Lieu + Capacité */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label style={s.label}>Lieu *</label>
-                  <input type="text" name="lieu" value={formData.lieu} onChange={handleChange}
-                    placeholder="Ex : Amphithéâtre A" style={inputStyle('lieu')}
-                    onFocus={e => !fieldErrors.lieu && (e.target.style.borderColor = '#E94560')}
-                    onBlur={e => !fieldErrors.lieu && (e.target.style.borderColor = '#E0E0E6')}
-                  />
-                  {fe('lieu') && <div style={s.fieldError}>{fe('lieu')}</div>}
-                </div>
-                <div>
-                  <label style={s.label}>Capacité maximale *</label>
-                  <input type="number" name="capacite_max" value={formData.capacite_max} onChange={handleChange}
-                    placeholder="Ex : 50" min="1" style={inputStyle('capacite_max')}
-                    onFocus={e => !fieldErrors.capacite_max && (e.target.style.borderColor = '#E94560')}
-                    onBlur={e => !fieldErrors.capacite_max && (e.target.style.borderColor = '#E0E0E6')}
-                  />
-                  {fe('capacite_max') && <div style={s.fieldError}>{fe('capacite_max')}</div>}
-                </div>
+              <div className="ec-field">
+                <label className="ec-label" htmlFor="ev-lieu">Lieu <span className="og__req" aria-hidden="true">*</span></label>
+                <input id="ev-lieu" type="text" name="lieu" value={formData.lieu} onChange={handleChange}
+                  placeholder="Ex : Amphithéâtre A" className={cls('ec-input', 'lieu')} {...aria('lieu')} />
+                {fieldErr('lieu')}
+              </div>
+              <div className="ec-field">
+                <label className="ec-label" htmlFor="ev-capacite_max">Capacité maximale <span className="og__req" aria-hidden="true">*</span></label>
+                <input id="ev-capacite_max" type="number" name="capacite_max" value={formData.capacite_max} onChange={handleChange}
+                  placeholder="Ex : 50" min="1" className={cls('ec-input', 'capacite_max')} {...aria('capacite_max')} />
+                {fieldErr('capacite_max')}
               </div>
 
-              {/* Date début */}
-              <div>
-                <label style={s.label}>Date et heure de début *</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div>
-                    <input type="date" name="date" value={formData.date} onChange={handleChange} style={inputStyle('date')} />
-                    {fe('date') && <div style={s.fieldError}>{fe('date')}</div>}
-                  </div>
-                  <div>
-                    <input type="time" name="heure" value={formData.heure} onChange={handleChange} style={inputStyle('heure')} />
-                    {fe('heure') && <div style={s.fieldError}>{fe('heure')}</div>}
-                  </div>
-                </div>
+              {/* Début */}
+              <div className="ec-field">
+                <label className="ec-label" htmlFor="ev-date">Date de début <span className="og__req" aria-hidden="true">*</span></label>
+                <input id="ev-date" type="date" name="date" value={formData.date} onChange={handleChange} className={cls('ec-input', 'date')} {...aria('date')} />
+                {fieldErr('date')}
+              </div>
+              <div className="ec-field">
+                <label className="ec-label" htmlFor="ev-heure">Heure de début <span className="og__req" aria-hidden="true">*</span></label>
+                <input id="ev-heure" type="time" name="heure" value={formData.heure} onChange={handleChange} className={cls('ec-input', 'heure')} {...aria('heure')} />
+                {fieldErr('heure')}
               </div>
 
-              {/* Date fin */}
-              <div>
-                <label style={s.label}>Date et heure de fin *</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div>
-                    <input type="date" name="date_fin" value={formData.date_fin} onChange={handleChange} style={inputStyle('date_fin')} />
-                    {fe('date_fin') && <div style={s.fieldError}>{fe('date_fin')}</div>}
-                  </div>
-                  <div>
-                    <input type="time" name="heure_fin" value={formData.heure_fin} onChange={handleChange} style={inputStyle('heure_fin')} />
-                    {fe('heure_fin') && <div style={s.fieldError}>{fe('heure_fin')}</div>}
-                  </div>
-                </div>
+              {/* Fin */}
+              <div className="ec-field">
+                <label className="ec-label" htmlFor="ev-date_fin">Date de fin <span className="og__req" aria-hidden="true">*</span></label>
+                <input id="ev-date_fin" type="date" name="date_fin" value={formData.date_fin} onChange={handleChange} className={cls('ec-input', 'date_fin')} {...aria('date_fin')} />
+                {fieldErr('date_fin')}
               </div>
-
-              {/* Boutons */}
-              <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
-                <button type="button" onClick={() => navigate('/organiser/events')}
-                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1.5px solid #E0E0E6', background: 'white', color: '#7A7A8C', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
-                >
-                  Annuler
-                </button>
-                <button type="submit" disabled={loading}
-                  style={{ flex: 2, padding: '12px', borderRadius: '10px', border: 'none', background: loading ? '#ccc' : 'linear-gradient(135deg, #E94560, #C0392B)', color: 'white', fontSize: '14px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: loading ? 'none' : '0 4px 12px rgba(233,69,96,0.35)', transition: 'opacity 0.15s' }}
-                >
-                  {loading ? 'Enregistrement…' : '💾 Enregistrer les modifications'}
-                </button>
+              <div className="ec-field">
+                <label className="ec-label" htmlFor="ev-heure_fin">Heure de fin <span className="og__req" aria-hidden="true">*</span></label>
+                <input id="ev-heure_fin" type="time" name="heure_fin" value={formData.heure_fin} onChange={handleChange} className={cls('ec-input', 'heure_fin')} {...aria('heure_fin')} />
+                {fieldErr('heure_fin')}
               </div>
-            </form>
-          </div>
-
-          {/* Aperçu live */}
-          <div style={{ background: 'white', borderRadius: '14px', border: '1.5px solid #E0E0E6', padding: '22px', position: 'sticky', top: '32px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#7A7A8C', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px' }}>Aperçu</div>
-
-            <div style={{ width: '52px', height: '52px', borderRadius: '12px', background: '#F4F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', marginBottom: '12px' }}>
-              {eventEmoji}
             </div>
 
-            <div style={{ fontSize: '15px', fontWeight: 700, color: formData.titre ? '#1A1A2E' : '#C0C0C8', marginBottom: '4px' }}>
-              {formData.titre || "Titre de l'événement"}
+            <div className="og__footer">
+              <button type="button" className="ec-btn ec-btn--ghost" onClick={() => navigate('/organiser/events')}>
+                Annuler
+              </button>
+              <button type="submit" className="ec-btn ec-btn--primary" disabled={loading}>
+                {loading ? 'Enregistrement…' : <><SaveIcon size={16} /> Enregistrer les modifications</>}
+              </button>
             </div>
-
-            {formData.categorie && (
-              <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '10px' }}>{formData.categorie}</div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
-              {formatPreviewDate(formData.date, formData.heure) && (
-                <div style={{ fontSize: '12px', color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  📅 {formatPreviewDate(formData.date, formData.heure)}
-                </div>
-              )}
-              {formData.lieu && (
-                <div style={{ fontSize: '12px', color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  📍 {formData.lieu}
-                </div>
-              )}
-              {formData.capacite_max && (
-                <div style={{ fontSize: '12px', color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  👥 {formData.capacite_max} places
-                </div>
-              )}
-              {selectedClub && (
-                <div style={{ fontSize: '12px', color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  🏛️ {selectedClub.nom}
-                </div>
-              )}
-            </div>
-
-            <div style={{ background: '#E6F0FF', color: '#4A4AE8', borderRadius: '6px', padding: '6px 10px', fontSize: '11px', fontWeight: 600, display: 'inline-block' }}>
-              ✏️ Modification en cours
-            </div>
-          </div>
+          </form>
         </div>
+
+        {/* Aperçu live */}
+        <aside className="ec-card ec-card--sand og__preview" aria-label="Aperçu de l'événement">
+          <p className="og__preview-label">Aperçu</p>
+
+          <div className="og__preview-head">
+            <div className="og__avatar" aria-hidden="true">
+              {eventEmoji || <CalendarIcon size={26} />}
+            </div>
+            <div>
+              <p className={`og__preview-title${formData.titre ? '' : ' is-empty'}`}>{formData.titre || "Titre de l'événement"}</p>
+              {formData.categorie && <p className="og__card-sub">{formData.categorie}</p>}
+            </div>
+          </div>
+
+          <div className="og__meta">
+            {formatPreviewDate(formData.date, formData.heure) && (
+              <div className="og__meta-line"><CalendarIcon size={16} /><span>{formatPreviewDate(formData.date, formData.heure)}</span></div>
+            )}
+            {formData.lieu && (
+              <div className="og__meta-line"><PinIcon size={16} /><span>{formData.lieu}</span></div>
+            )}
+            {formData.capacite_max && (
+              <div className="og__meta-line"><UsersIcon size={16} /><span>{formData.capacite_max} places</span></div>
+            )}
+            {selectedClub && (
+              <div className="og__meta-line"><ClubIcon size={16} /><span>{selectedClub.nom}</span></div>
+            )}
+          </div>
+
+          <span className="ec-badge ec-badge--green"><EditIcon size={12} /> Modification en cours</span>
+        </aside>
       </div>
-    </div>
+    </DashboardLayout>
   )
 }

@@ -1,3 +1,4 @@
+import { getCurrentUserId } from '../../utils/currentUser'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getConversations, getMessages, sendMessage, startConversation } from '../../api/messages'
@@ -54,7 +55,7 @@ export default function StudentMessaging() {
 
       const formatted = raw.map(conv => {
         const otherParticipant = conv.participants?.find(
-          p => p.id !== Number(localStorage.getItem('user_id'))
+          p => p.id !== getCurrentUserId()
         )
         return {
           id: conv.id,
@@ -103,13 +104,15 @@ export default function StudentMessaging() {
     try {
       const res = await getMessages(convId)
       const raw = Array.isArray(res.data) ? res.data : (res.data?.data || res.data?.messages || [])
-      const currentUserId = Number(localStorage.getItem('user_id')) || JSON.parse(localStorage.getItem('user') || '{}')?.id
+      const currentUserId = getCurrentUserId()
 
       const formatted = raw.map(msg => {
         const senderId = msg.sender?.id || msg.user_id
         return {
           id: msg.id,
           content: msg.content,
+          attachmentUrl: msg.attachment_url || null,
+          attachmentName: msg.attachment_name || null,
           sentAt: msg.created_at,
           isOwn: Number(senderId) === Number(currentUserId),
           senderName: msg.sender?.name || 'Utilisateur',
@@ -151,9 +154,9 @@ export default function StudentMessaging() {
     return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
   }
 
-  const getAvatarColor = (id) => {
-    const colors = ['#E94560', '#0F3460', '#2ECC71', '#F39C12', '#9B59B6', '#E74C3C']
-    return colors[id % colors.length]
+  const getAvatarTone = (id) => {
+    const tones = ['green', 'terra', 'dark', 'brown']
+    return tones[id % tones.length]
   }
 
   const formatTime = (date) => {
@@ -173,30 +176,30 @@ export default function StudentMessaging() {
 
   return (
     <div className="student-messaging-body">
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:wght@700;900&display=swap" rel="stylesheet" />
       <Navbar />
 
-      <div className="student-messaging-layout">
+      <div className={`student-messaging-layout${selectedConv ? ' has-conv' : ''}`}>
         <div className="student-messaging-conv-list">
           <div className="student-messaging-list-header">
-            <h3>Conversations</h3>
+            <h1>Conversations</h1>
           </div>
 
           <div className="student-messaging-conv-items">
             {loading ? (
-              <p className="student-messaging-muted">Chargement...</p>
+              <p className="student-messaging-muted" role="status">Chargement...</p>
             ) : conversations.length === 0 ? (
               <p className="student-messaging-muted">Aucune conversation.</p>
             ) : (
               conversations.map(conv => (
-                <div
+                <button
+                  type="button"
                   key={conv.id}
                   className={`student-messaging-conv-item ${selectedConv?.id === conv.id ? 'active' : ''}`}
+                  aria-current={selectedConv?.id === conv.id ? 'true' : undefined}
                   onClick={() => setSelectedConv(conv)}
                 >
                   <div
-                    className="student-messaging-conv-avatar"
-                    style={{ background: getAvatarColor(conv.id) }}
+                    className={`student-messaging-conv-avatar tone-${getAvatarTone(conv.id)}`}
                   >
                     {getInitials(conv.name)}
                   </div>
@@ -209,7 +212,7 @@ export default function StudentMessaging() {
                   <div className="student-messaging-conv-meta">
                     <div className="student-messaging-conv-time">{formatTime(conv.lastMessageAt)}</div>
                   </div>
-                </div>
+                </button>
               ))
             )}
           </div>
@@ -219,9 +222,19 @@ export default function StudentMessaging() {
           {selectedConv ? (
             <>
               <div className="student-messaging-chat-header">
+                <button
+                  type="button"
+                  className="student-messaging-back"
+                  onClick={() => setSelectedConv(null)}
+                  aria-label="Retour aux conversations"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="m12 19-7-7 7-7" />
+                    <path d="M19 12H5" />
+                  </svg>
+                </button>
                 <div
-                  className="student-messaging-chat-avatar"
-                  style={{ background: getAvatarColor(selectedConv.id) }}
+                  className={`student-messaging-chat-avatar tone-${getAvatarTone(selectedConv.id)}`}
                 >
                   {getInitials(selectedConv.name)}
                 </div>
@@ -234,7 +247,9 @@ export default function StudentMessaging() {
               <div className="student-messaging-messages">
                 {messages.length === 0 ? (
                   <div className="student-messaging-empty-chat">
-                    <div className="student-messaging-empty-icon">💬</div>
+                    <svg className="student-messaging-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+                    </svg>
                     <p>Aucun message. Envoyez le premier !</p>
                   </div>
                 ) : (
@@ -244,10 +259,7 @@ export default function StudentMessaging() {
                       className={`student-messaging-msg ${msg.isOwn ? 'me' : ''}`}
                     >
                       <div
-                        className="student-messaging-msg-av"
-                        style={{
-                          background: msg.isOwn ? '#1A1A2E' : getAvatarColor(selectedConv.id),
-                        }}
+                        className={`student-messaging-msg-av ${msg.isOwn ? 'tone-own' : `tone-${getAvatarTone(selectedConv.id)}`}`}
                       >
                         {msg.isOwn ? 'M' : getInitials(msg.senderName)}
                       </div>
@@ -255,7 +267,20 @@ export default function StudentMessaging() {
                         {!msg.isOwn && (
                           <div className="student-messaging-msg-sender">{msg.senderName}</div>
                         )}
-                        <div className="student-messaging-msg-bubble">{msg.content}</div>
+                        <div className="student-messaging-msg-bubble">
+                          {msg.content}
+                          {msg.attachmentUrl && (
+                            /\.(jpe?g|png|gif|webp)$/i.test(msg.attachmentName || '') ? (
+                              <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer" className="student-messaging-attach-img">
+                                <img src={msg.attachmentUrl} alt={msg.attachmentName || 'Image jointe'} />
+                              </a>
+                            ) : (
+                              <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer" download className="student-messaging-attach">
+                                {msg.attachmentName || 'Fichier joint'}
+                              </a>
+                            )
+                          )}
+                        </div>
                         <div className="student-messaging-msg-time">{formatTime(msg.sentAt)}</div>
                       </div>
                     </div>
@@ -269,6 +294,7 @@ export default function StudentMessaging() {
                   <textarea
                     className="student-messaging-input-box"
                     placeholder="Écrire un message…"
+                    aria-label="Écrire un message"
                     value={inputValue}
                     onChange={(e) => {
                       setInputValue(e.target.value)
@@ -280,18 +306,30 @@ export default function StudentMessaging() {
                     disabled={sending}
                   />
                   <button
+                    type="button"
                     className="student-messaging-btn-send"
                     onClick={handleSendMessage}
                     disabled={sending || !inputValue.trim()}
                   >
-                    {sending ? '⏱️' : 'Envoyer ↑'}
+                    {sending ? 'Envoi…' : (
+                      <>
+                        Envoyer
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="m5 12 7-7 7 7" />
+                          <path d="M12 19V5" />
+                        </svg>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
             </>
           ) : (
             <div className="student-messaging-empty-state">
-              <div className="student-messaging-empty-icon">✉️</div>
+              <svg className="student-messaging-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect width="20" height="16" x="2" y="4" rx="2" />
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+              </svg>
               <p>Sélectionnez une conversation pour démarrer.</p>
             </div>
           )}

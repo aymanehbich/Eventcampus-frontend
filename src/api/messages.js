@@ -12,8 +12,18 @@ export const createConversation = (memberId) =>
 export const getMessages = (conversationId) =>
   api.get(`/messages/conversations/${conversationId}`)
 
-export const sendMessage = (conversationId, content, isBroadcast = false) =>
-  api.post(`/messages/conversations/${conversationId}/send`, { content, is_broadcast: isBroadcast })
+export const sendMessage = (conversationId, content, isBroadcast = false, file = null) => {
+  if (file) {
+    const form = new FormData()
+    if (content) form.append('content', content)
+    form.append('is_broadcast', isBroadcast ? '1' : '0')
+    form.append('file', file)
+    return api.post(`/messages/conversations/${conversationId}/send`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  }
+  return api.post(`/messages/conversations/${conversationId}/send`, { content, is_broadcast: isBroadcast })
+}
 
 export const searchMembers = (query) =>
   api.get('/messages/search-members', { params: { q: query } })

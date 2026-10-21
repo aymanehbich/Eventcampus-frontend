@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getOrganizerEvents, deleteEvent } from '../../api/events'
+import DashboardLayout from '../../components/DashboardLayout'
+import { PlusIcon, UsersIcon, EditIcon, TrashIcon, CheckIcon, ClockIcon, XIcon, CalendarIcon, PinIcon } from './OrganiserIcons'
+import './Organiser.css'
 
-const CATEGORY_COLORS = {
-  Conférence: '#FFF0E6', Atelier: '#E6F0FF', Soirée: '#FFE6F0',
-  'Réunion de club': '#F0E6FF', Hackathon: '#E6FFE6', Environnement: '#E6FFFA', default: '#F4F4F6',
-}
-const CATEGORY_EMOJIS = {
-  Conférence: '🎤', Atelier: '🎨', Soirée: '🎭',
-  'Réunion de club': '👥', Hackathon: '👨‍💻', Environnement: '🌱', default: '📅',
+const StatutBadge = ({ statut }) => {
+  const st = statut?.toString().toLowerCase().trim()
+  if (st === 'en attente' || st === 'pending') {
+    return <span className="ec-badge ec-badge--amber"><ClockIcon size={12} /> En attente</span>
+  }
+  if (st === 'accepté' || st === 'accepte' || st === 'validé' || st === 'valide') {
+    return <span className="ec-badge ec-badge--green"><CheckIcon size={12} /> Publié</span>
+  }
+  return <span className="ec-badge ec-badge--red"><XIcon size={12} /> Rejeté</span>
 }
 
 export default function MesEvenements() {
@@ -45,191 +50,115 @@ export default function MesEvenements() {
     return new Date(str).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
-  const s = {
-    layout: { display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" },
-    sidebar: { background: '#1A1A2E', padding: '24px 0', position: 'relative' },
-    logo: { fontFamily: "'Fraunces', serif", fontSize: '18px', color: 'white', padding: '0 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '16px' },
-    navItem: { padding: '11px 20px', fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.55)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' },
-    navActive: { padding: '11px 20px', fontSize: '13px', fontWeight: 500, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(233,69,96,0.15)', borderRight: '3px solid #E94560' },
-    main: { padding: '32px', background: '#F4F4F6', minHeight: '100vh' },
-    tableWrap: { background: 'white', borderRadius: '12px', border: '1.5px solid #E0E0E6', overflow: 'hidden' },
-  }
-
   const confirmEvent = events.find(e => e.id === confirmId)
 
+  const createButton = (
+    <button type="button" className="ec-btn ec-btn--primary" onClick={() => navigate('/organiser/events/create')}>
+      <PlusIcon /> Créer un événement
+    </button>
+  )
+
   return (
-    <div style={s.layout}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700;900&display=swap" rel="stylesheet" />
-
-      {/* Sidebar */}
-      <div style={s.sidebar}>
-        <div style={s.logo}>Event<span style={{ color: '#E94560' }}>Campus</span></div>
-        <div style={s.navItem} onClick={() => navigate('/organiser/dashboard')}>📊 Dashboard</div>
-        <div style={s.navItem} onClick={() => navigate('/organiser/clubs')}>🏛️ Mon club</div>
-        <div style={s.navActive}>📅 Mes événements</div>
-        <div style={s.navItem} onClick={() => navigate('/organiser/adhesions')}>👥 Membres</div>
-        <div className="messaging-nav-item" onClick={() => navigate('/organiser/messages')}>✉️ Messages</div>
-        <div style={{ position: 'absolute', bottom: '24px', left: 0, width: '220px', boxSizing: 'border-box', padding: '0 16px' }}>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
-            <button
-              onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login') }}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-                padding: '11px 14px', borderRadius: '10px', border: '1px solid rgba(233,69,96,0.35)',
-                background: 'rgba(233,69,96,0.1)', color: '#E94560',
-                fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                fontFamily: "'DM Sans', sans-serif", transition: 'all 0.2s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#E94560'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = '#E94560' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(233,69,96,0.1)'; e.currentTarget.style.color = '#E94560'; e.currentTarget.style.borderColor = 'rgba(233,69,96,0.35)' }}
-            >
-              <span style={{ fontSize: '16px' }}>🚪</span> Déconnexion
-            </button>
-          </div>
+    <DashboardLayout
+      active="events"
+      title="Mes événements"
+      subtitle={`${events.length} événement${events.length !== 1 ? 's' : ''} créé${events.length !== 1 ? 's' : ''}`}
+      actions={createButton}
+    >
+      {loading ? (
+        <div className="og__cards" aria-busy="true" aria-live="polite">
+          {[0, 1, 2].map(i => <div key={i} className="ec-skeleton og__skeleton" />)}
+          <span className="ec-sr-only">Chargement...</span>
         </div>
-      </div>
-
-      {/* Main */}
-      <div style={s.main}>
-        <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
-          <div>
-            <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', color: '#1A1A2E' }}>Mes événements</h2>
-            <div style={{ fontSize: '13px', color: '#7A7A8C', marginTop: '4px' }}>
-              {events.length} événement{events.length !== 1 ? 's' : ''} créé{events.length !== 1 ? 's' : ''}
-            </div>
-          </div>
-          <button
-            onClick={() => navigate('/organiser/events/create')}
-            style={{ background: '#E94560', color: 'white', border: 'none', borderRadius: '10px', padding: '12px 24px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', marginTop: '2px', transition: 'opacity 0.15s' }}
-            onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-            onMouseLeave={(e) => e.target.style.opacity = '1'}
-          >
-            ➕ Créer un événement
-          </button>
+      ) : error ? (
+        <div className="ec-state ec-state--error" role="alert">{error}</div>
+      ) : events.length === 0 ? (
+        <div className="ec-card ec-card--sand og__empty">
+          <div className="og__empty-icon"><CalendarIcon size={26} /></div>
+          <h2 className="og__empty-title">Aucun événement</h2>
+          <p className="og__empty-text">Vous n'avez créé aucun événement.</p>
+          {createButton}
         </div>
+      ) : (
+        <div className="og__cards">
+          {events.map(evt => {
+            const inscrits = evt.inscrits ?? 0
+            const totalPlaces = inscrits + (evt.places_disponibles ?? 0)
+            const pct = totalPlaces > 0 ? Math.min(100, Math.round((inscrits / totalPlaces) * 100)) : 0
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
-        ) : error ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#E94560', fontSize: '14px' }}>{error}</div>
-        ) : (
-          <div style={s.tableWrap}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead>
-                <tr>
-                  {['Événement', 'Date', 'Lieu', 'Inscrits', 'Statut', 'Actions'].map(h => (
-                    <th key={h} style={{ background: '#F4F4F6', padding: '10px 16px', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#7A7A8C', fontWeight: 600 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {events.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#7A7A8C', fontSize: '13px' }}>
-                      Vous n'avez créé aucun événement.
-                    </td>
-                  </tr>
-                ) : (
-                  events.map((evt, i) => {
-                    const cat = evt.categorie || 'default'
-                    const bg = CATEGORY_COLORS[cat] || CATEGORY_COLORS.default
-                    const emoji = CATEGORY_EMOJIS[cat] || CATEGORY_EMOJIS.default
-                    const totalPlaces = (evt.inscrits ?? 0) + (evt.places_disponibles ?? 0)
-                    const isLast = i === events.length - 1
-                    const tdStyle = { padding: '13px 16px', borderBottom: isLast ? 'none' : '1px solid #E0E0E6', color: '#1A1A2E', verticalAlign: 'middle' }
+            return (
+              <article key={evt.id} className="ec-card ec-card--sand og__card">
+                <div className="og__card-head">
+                  <div className="og__card-head-text">
+                    <h2 className="og__card-title og__card-title--wrap">{evt.titre}</h2>
+                    {evt.categorie && <p className="og__card-sub">{evt.categorie}</p>}
+                  </div>
+                  <StatutBadge statut={evt.statut} />
+                </div>
 
-                    return (
-                      <tr key={evt.id}>
-                        <td style={tdStyle}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>{emoji}</div>
-                            <div>
-                              <div style={{ fontWeight: 600 }}>{evt.titre}</div>
-                              <div style={{ fontSize: '11px', color: '#7A7A8C', marginTop: '2px' }}>{cat}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td style={tdStyle}>{formatDate(evt.date)}</td>
-                        <td style={tdStyle}>{evt.lieu || '—'}</td>
-                        <td style={tdStyle}>
-                          <span style={{ fontWeight: 600 }}>{evt.inscrits ?? 0}</span>
-                          <span style={{ color: '#7A7A8C' }}> / {totalPlaces}</span>
-                        </td>
-                        <td style={tdStyle}>
-                          {(() => {
-                            const st = evt.statut?.toString().toLowerCase().trim()
-                            if (st === 'en attente' || st === 'pending') {
-                              return <span style={{ background: '#FFF4E6', color: '#FF9500', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>⏱️ En attente</span>
-                            }
-                            if (st === 'accepté' || st === 'accepte' || st === 'validé' || st === 'valide') {
-                              return <span style={{ background: '#E6FFE6', color: '#4CAF50', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>✅ Publié</span>
-                            }
-                            return <span style={{ background: '#FFE6E6', color: '#E94560', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>❌ Rejeté</span>
-                          })()}
-                        </td>
-                        <td style={tdStyle}>
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            <button
-                              onClick={() => navigate(`/organiser/events/${evt.id}/inscrits`)}
-                              style={{ background: '#EEF0FF', color: '#4A4AE8', border: 'none', borderRadius: '8px', padding: '7px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-                            >
-                              👥 Voir inscrits
-                            </button>
-                            <button
-                              onClick={() => navigate(`/organiser/events/${evt.id}/edit`)}
-                              style={{ background: '#FFF4E6', color: '#FF9500', border: 'none', borderRadius: '8px', padding: '7px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-                            >
-                              ✏️ Modifier
-                            </button>
-                            <button
-                              onClick={() => setConfirmId(evt.id)}
-                              style={{ background: '#fde8ed', color: '#E94560', border: 'none', borderRadius: '8px', padding: '7px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-                            >
-                              🗑️ Supprimer
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                <div className="og__meta">
+                  <div className="og__meta-line">
+                    <CalendarIcon size={16} /><span>{formatDate(evt.date) || '—'}</span>
+                  </div>
+                  <div className="og__meta-line" title={evt.lieu || ''}>
+                    <PinIcon size={16} /><span>{evt.lieu || '—'}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="og__cap-text">
+                    <strong>{inscrits}</strong> / {totalPlaces} inscrits
+                  </div>
+                  <div
+                    className="og__bar"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={totalPlaces}
+                    aria-valuenow={inscrits}
+                    aria-label="Taux d'inscription"
+                  >
+                    <div className="og__bar-fill" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+
+                <div className="og__actions">
+                  <button type="button" className="ec-btn ec-btn--outline" onClick={() => navigate(`/organiser/events/${evt.id}/inscrits`)}>
+                    <UsersIcon size={16} /> Voir inscrits
+                  </button>
+                  <button type="button" className="ec-btn ec-btn--accent" onClick={() => navigate(`/organiser/events/${evt.id}/edit`)}>
+                    <EditIcon size={16} /> Modifier
+                  </button>
+                  <button type="button" className="ec-btn ec-btn--danger" onClick={() => setConfirmId(evt.id)}>
+                    <TrashIcon size={16} /> Supprimer
+                  </button>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
 
       {/* Modal de confirmation */}
       {confirmId && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: 'white', borderRadius: '16px', padding: '32px 28px', width: '420px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
-            <div style={{ fontSize: '32px', textAlign: 'center', marginBottom: '12px' }}>🗑️</div>
-            <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: '#1A1A2E', textAlign: 'center', marginBottom: '8px' }}>
-              Supprimer l'événement ?
-            </h3>
-            <p style={{ fontSize: '13px', color: '#7A7A8C', textAlign: 'center', lineHeight: '1.6', marginBottom: '24px' }}>
-              Vous êtes sur le point de supprimer <strong style={{ color: '#1A1A2E' }}>{confirmEvent?.titre}</strong>.<br />
+        <div className="og__overlay">
+          <div className="og__modal" role="alertdialog" aria-modal="true" aria-labelledby="og-del-title" aria-describedby="og-del-text">
+            <div className="og__modal-icon"><TrashIcon size={24} /></div>
+            <h3 id="og-del-title" className="og__modal-title">Supprimer l'événement ?</h3>
+            <p id="og-del-text" className="og__modal-text">
+              Vous êtes sur le point de supprimer <strong>{confirmEvent?.titre}</strong>.<br />
               Cette action est irréversible.
             </p>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={() => setConfirmId(null)}
-                disabled={deleting}
-                style={{ flex: 1, background: '#F4F4F6', color: '#1A1A2E', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '12px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
-              >
+            <div className="og__modal-actions">
+              <button type="button" className="ec-btn ec-btn--ghost" onClick={() => setConfirmId(null)} disabled={deleting} autoFocus>
                 Annuler
               </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                style={{ flex: 1, background: 'linear-gradient(135deg, #E94560, #C0392B)', color: 'white', border: 'none', borderRadius: '10px', padding: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(233,69,96,0.35)' }}
-              >
+              <button type="button" className="ec-btn og__btn-solid-danger" onClick={handleDelete} disabled={deleting}>
                 {deleting ? 'Suppression...' : 'Oui, supprimer'}
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   )
 }

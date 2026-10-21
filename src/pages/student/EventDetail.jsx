@@ -3,35 +3,27 @@ import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import { getEvent, registerEvent, unregisterEvent } from '../../api/events'
 import { addEventToCalendar } from '../../api/googleCalendar'
+import { Icon } from './StudentIcons'
+import './EventDetail.css'
 
-const CATEGORY_COLORS = {
-  Conférence: '#FFF0E6',
-  Atelier: '#E6F0FF',
-  Soirée: '#FFE6F0',
-  'Réunion de club': '#F0E6FF',
-  Hackathon: '#E6FFE6',
-  Environnement: '#E6FFFA',
-  default: '#F4F4F6',
+const CATEGORY_TONES = {
+  Conférence: 'terra',
+  Atelier: 'mint',
+  Soirée: 'sand',
+  'Réunion de club': 'mint',
+  Hackathon: 'mint',
+  Environnement: 'mint',
+  default: 'sand',
 }
 
-const CATEGORY_EMOJIS = {
-  Conférence: '🎤',
-  Atelier: '🎨',
-  Soirée: '🎭',
-  'Réunion de club': '👥',
-  Hackathon: '👨‍💻',
-  Environnement: '🌱',
-  default: '📅',
-}
-
-const CATEGORY_TAGS = {
-  Conférence: { bg: '#EEF0FF', color: '#4A4AE8' },
-  Atelier: { bg: '#EEF0FF', color: '#4A4AE8' },
-  Soirée: { bg: '#fff3e0', color: '#a05000' },
-  'Réunion de club': { bg: '#EEF0FF', color: '#4A4AE8' },
-  Hackathon: { bg: '#EEF0FF', color: '#4A4AE8' },
-  Environnement: { bg: '#e8faf3', color: '#1a7a47' },
-  default: { bg: '#EEF0FF', color: '#4A4AE8' },
+const CATEGORY_ICONS = {
+  Conférence: 'mic',
+  Atelier: 'palette',
+  Soirée: 'sparkles',
+  'Réunion de club': 'users',
+  Hackathon: 'code',
+  Environnement: 'leaf',
+  default: 'calendar',
 }
 
 export default function EventDetail() {
@@ -41,7 +33,7 @@ export default function EventDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [registering, setRegistering] = useState(false)
-  
+
   // États mis à jour (Branche 3)
   const [userState, setUserState] = useState(null) // 'registered' | 'waitlisted' | null
   const [waitlistPosition, setWaitlistPosition] = useState(null)
@@ -127,7 +119,7 @@ export default function EventDetail() {
       const res = await addEventToCalendar(id)
       if (res.data.calendar_added) {
         setCalendarAdded(true)
-        setCalendarMsg({ type: 'success', text: '📅 Ajouté à votre Google Agenda !' })
+        setCalendarMsg({ type: 'success', text: 'Ajouté à votre Google Agenda !' })
       } else if (res.data.not_connected) {
         setCalendarNotConnected(true)
       } else {
@@ -163,230 +155,264 @@ export default function EventDetail() {
 
   if (loading) {
     return (
-      <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#EAEAEF', minHeight: '100vh' }}>
+      <div className="ed">
         <Navbar />
-        <div style={{ textAlign: 'center', padding: '80px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
+        <div className="ed__state" role="status">Chargement...</div>
       </div>
     )
   }
 
   if (error || !event) {
     return (
-      <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#EAEAEF', minHeight: '100vh' }}>
+      <div className="ed">
         <Navbar />
-        <div style={{ textAlign: 'center', padding: '80px', color: '#E94560', fontSize: '14px' }}>{error || 'Événement introuvable.'}</div>
+        <div className="ed__state ed__state--error" role="alert">{error || 'Événement introuvable.'}</div>
       </div>
     )
   }
 
   const cat = event.categorie || event.category || 'default'
-  const bgColor = CATEGORY_COLORS[cat] || CATEGORY_COLORS.default
-  const emoji = CATEGORY_EMOJIS[cat] || CATEGORY_EMOJIS.default
-  const tagStyle = CATEGORY_TAGS[cat] || CATEGORY_TAGS.default
+  const tone = CATEGORY_TONES[cat] || CATEGORY_TONES.default
+  const icon = CATEGORY_ICONS[cat] || CATEGORY_ICONS.default
   const isFull = event.places_disponibles <= 0
   const totalPlaces = (event.inscrits ?? 0) + (event.places_disponibles ?? 0)
   const inscriptionPercentage = totalPlaces > 0 ? ((event.inscrits ?? 0) / totalPlaces) * 100 : 0
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#EAEAEF', minHeight: '100vh' }}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700;900&display=swap" rel="stylesheet" />
+    <div className="ed">
       <Navbar />
 
-      {/* Breadcrumb */}
-      <div style={{ padding: '12px 36px', fontSize: '12px', color: '#7A7A8C', background: '#F4F4F6', borderBottom: '1px solid #E0E0E6' }}>
-        <span onClick={() => navigate('/student/events')} style={{ color: '#E94560', fontWeight: 600, cursor: 'pointer' }}>Événements</span>
-        {' › '}
-        <span>{event.titre || event.title}</span>
-      </div>
+      <main className="ed__wrap">
+        {/* Breadcrumb */}
+        <nav className="ed__crumbs" aria-label="Fil d'Ariane">
+          <button type="button" className="ed__crumb-link" onClick={() => navigate('/student/events')}>
+            Événements
+          </button>
+          <Icon name="chevronRight" size={14} />
+          <span className="ed__crumb-current" aria-current="page">{event.titre || event.title}</span>
+        </nav>
 
-      {/* Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', background: 'white', minHeight: 'calc(100vh - 101px)' }}>
-        {/* Main Content */}
-        <div style={{ padding: '40px 44px', borderRight: '1px solid #E0E0E6' }}>
-          <div style={{ height: '240px', borderRadius: '14px', background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '72px', marginBottom: '24px' }}>{emoji}</div>
-          <div style={{ marginBottom: '14px' }}>
-            <span style={{ background: tagStyle.bg, color: tagStyle.color, fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '5px', display: 'inline-block', marginRight: '8px' }}>{cat}</span>
-            {isFull && <span style={{ display: 'inline-block', background: '#fde8ed', color: '#E94560', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px' }}>🔒 Complet</span>}
-          </div>
-          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: '30px', color: '#1A1A2E', marginBottom: '18px' }}>{event.titre || event.title}</h1>
-          
-          {/* Meta Info */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '28px', padding: '20px', background: '#F4F4F6', borderRadius: '12px' }}>
-            <div><div style={{ fontSize: '11px', color: '#7A7A8C', fontWeight: 600 }}>📅 Date</div><div style={{ fontSize: '14px', fontWeight: 600 }}>{formatDate(event.date)}</div></div>
-            <div><div style={{ fontSize: '11px', color: '#7A7A8C', fontWeight: 600 }}>🕑 Heure</div><div style={{ fontSize: '14px', fontWeight: 600 }}>{formatTime(event.heure)} – {getEndTime(event.date_fin, event.heure_fin)}</div></div>
-            <div><div style={{ fontSize: '11px', color: '#7A7A8C', fontWeight: 600 }}>📍 Lieu</div><div style={{ fontSize: '14px', fontWeight: 600 }}>{event.lieu || 'Lieu TBA'}</div></div>
-            <div><div style={{ fontSize: '11px', color: '#7A7A8C', fontWeight: 600 }}>🏛️ Club</div><div style={{ fontSize: '14px', fontWeight: 600 }}>{event.club_name || event.club || 'Club'}</div></div>
-          </div>
-
-          <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '16px', color: '#1A1A2E', marginBottom: '10px' }}>Description</h2>
-          <p style={{ fontSize: '14px', color: '#555', lineHeight: '1.8' }}>{event.description}</p>
-        </div>
-
-        {/* Sidebar */}
-        <div style={{ padding: '32px 24px', background: '#F4F4F6', overflowY: 'auto' }}>
-          <div style={{ background: 'white', borderRadius: '14px', border: isFull && userState !== 'registered' ? '1.5px solid #f5c97a' : '1.5px solid #E0E0E6', padding: '22px', marginBottom: '16px' }}>
-            <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1A1A2E', marginBottom: '14px' }}>Places disponibles</h4>
-
-            {event.statut === 'En attente' ? (
-              <div style={{ background: '#FFF4E6', border: '1.5px solid #FFB347', borderRadius: '10px', padding: '16px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏱️</div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#FF9500', marginBottom: '6px' }}>
-                  En attente d'approbation
-                </div>
-                <div style={{ fontSize: '12px', color: '#FF9500', lineHeight: '1.5' }}>
-                  Cet événement est en attente d'approbation de l'administrateur.
-                  <br />
-                  Les inscriptions seront ouvertes dès qu'il sera approuvé.
-                </div>
-              </div>
-            ) : userState === 'waitlisted' ? (
-              // --- BLOC LISTE D'ATTENTE MIS À JOUR (Branche 3) ---
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
-                  <span style={{ color: '#E94560', fontWeight: 700 }}>
-                    {event.inscrits ?? 0} / {totalPlaces} — Complet
-                  </span>
-                </div>
-                <div style={{ background: '#E0E0E6', borderRadius: '4px', height: '8px', overflow: 'hidden', marginBottom: '16px' }}>
-                  <div style={{ height: '100%', background: '#ccc', borderRadius: '4px', width: '100%' }} />
-                </div>
-
-                <div style={{ background: '#fff8ed', border: '1.5px solid #f5c97a', borderRadius: '10px', padding: '18px 14px', textAlign: 'center' }}>
-                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: '28px', color: '#7a4f00', fontWeight: 900, marginBottom: '2px' }}>
-                    Vous êtes N°{waitlistPosition ?? '?'}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#9a6800', lineHeight: '1.5', marginBottom: '10px' }}>
-                    sur la liste d'attente
-                    {waitlistTotal && <span style={{ color: '#bfa050' }}> ({waitlistTotal} personnes)</span>}
-                    <br />
-                    Vous serez notifié dès qu'une place se libère.
-                  </div>
-
-                  {waitlistPosition && waitlistTotal && (
-                    <div style={{ marginTop: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#9a6800', marginBottom: '4px' }}>
-                        <span>Position</span>
-                        <span>{waitlistPosition} / {waitlistTotal}</span>
-                      </div>
-                      <div style={{ background: '#f5e2b0', borderRadius: '4px', height: '6px', overflow: 'hidden' }}>
-                        <div style={{
-                          height: '100%',
-                          background: '#f5c97a',
-                          width: `${100 - ((waitlistPosition - 1) / waitlistTotal) * 100}%`,
-                          transition: 'width 0.4s ease',
-                        }} />
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#9a6800', marginTop: '4px', textAlign: 'right' }}>
-                        {waitlistPosition === 1 ? '🎉 Prochain sur la liste !' : `${waitlistPosition - 1} personne(s) avant vous`}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  onClick={handleUnregister}
-                  disabled={registering}
-                  style={{ width: '100%', background: 'transparent', color: '#7A7A8C', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', marginTop: '12px' }}
-                >
-                  Quitter la liste d'attente
-                </button>
-              </>
-            ) : (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
-                  <span>{event.inscrits ?? 0} inscrits</span>
-                  <span style={{ color: isFull ? '#E94560' : '#2ECC71', fontWeight: 700 }}>
-                    {isFull ? `0 places` : `${event.places_disponibles ?? 0} restantes`}
-                  </span>
-                </div>
-                <div style={{ background: '#E0E0E6', borderRadius: '4px', height: '8px', overflow: 'hidden', marginBottom: '16px' }}>
-                  <div style={{ height: '100%', background: userState === 'registered' ? '#2ECC71' : '#E94560', width: `${inscriptionPercentage}%` }} />
-                </div>
-
-                {userState === 'registered' ? (
-                  <>
-                    <button onClick={handleUnregister} disabled={registering} style={{ width: '100%', background: 'linear-gradient(135deg, #2ECC71, #27AE60)', color: 'white', border: 'none', borderRadius: '12px', padding: '14px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginTop: '16px' }}>
-                      ✓ Inscrit (Annuler ?)
-                    </button>
-                    <button
-                      onClick={handleAddToCalendar}
-                      disabled={addingToCalendar || calendarAdded}
-                      style={{
-                        width: '100%',
-                        background: calendarAdded ? '#E8F8F0' : 'white',
-                        color: calendarAdded ? '#1a7a47' : '#4A4AE8',
-                        border: `1.5px solid ${calendarAdded ? '#b2dfcd' : '#c5caf5'}`,
-                        borderRadius: '10px',
-                        padding: '10px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: calendarAdded ? 'default' : 'pointer',
-                        marginTop: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      {calendarAdded ? '✓ Ajouté au Google Agenda' : addingToCalendar ? 'Ajout en cours...' : '📅 Ajouter à Google Agenda'}
-                    </button>
-                    {calendarNotConnected && (
-                      <div style={{ marginTop: '10px', padding: '12px', borderRadius: '8px', background: '#FFF8E6', border: '1px solid #F5C97A', fontSize: '12px', color: '#7a4f00' }}>
-                        <div style={{ fontWeight: 600, marginBottom: '6px' }}>📅 Google Agenda non connecté</div>
-                        <div style={{ marginBottom: '8px', lineHeight: '1.5' }}>Connectez votre compte pour ajouter vos événements automatiquement.</div>
-                        <button
-                          onClick={() => navigate('/student/profile?tab=Préférences')}
-                          style={{ width: '100%', background: '#F5C97A', color: '#7a4f00', border: 'none', borderRadius: '6px', padding: '7px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
-                        >
-                          Connecter Google Agenda →
-                        </button>
-                      </div>
-                    )}
-                    {calendarMsg && (
-                      <div style={{
-                        marginTop: '10px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        background: calendarMsg.type === 'success' ? '#E8F8F0' : '#FDECEA',
-                        color: calendarMsg.type === 'success' ? '#1a7a47' : '#c0392b',
-                        border: `1px solid ${calendarMsg.type === 'success' ? '#b2dfcd' : '#f5c6cb'}`,
-                      }}>
-                        {calendarMsg.text}
-                      </div>
-                    )}
-                  </>
-                ) : isFull ? (
-                  <button onClick={handleRegister} disabled={registering} style={{ width: '100%', background: 'linear-gradient(135deg, #F39C12, #D68910)', color: 'white', border: 'none', borderRadius: '12px', padding: '14px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginTop: '16px' }}>
-                    ⏳ Rejoindre la liste d'attente
-                  </button>
-                ) : (
-                  <button onClick={handleRegister} disabled={registering} style={{ width: '100%', background: 'linear-gradient(135deg, #E94560, #C0392B)', color: 'white', border: 'none', borderRadius: '12px', padding: '15px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginTop: '16px' }}>
-                    S'inscrire à cet événement
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Organizing Club Box */}
-          <div style={{ background: 'white', borderRadius: '14px', border: '1.5px solid #E0E0E6', padding: '22px' }}>
-            <h4 style={{ fontSize: '13px', fontWeight: 700, marginBottom: '14px' }}>Club organisateur</h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>{emoji}</div>
-              <div>
-                <div style={{ fontSize: '14px', fontWeight: 600 }}>{event.club_name || 'Club'}</div>
-                <div style={{ fontSize: '12px', color: '#7A7A8C' }}>{event.club_members_count ?? 0} membres</div>
-              </div>
+        <div className="ed__layout">
+          {/* Main Content */}
+          <article className="ed__main">
+            <div className={`ed__cover ed__cover--${tone}`}>
+              <Icon name={icon} size={72} />
             </div>
-            <button onClick={() => navigate(`/student/clubs/${event.club_id}`)} style={{ display: 'block', width: '100%', marginTop: '14px', background: '#EEF0FF', color: '#0F3460', border: 'none', borderRadius: '8px', padding: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-              Voir la page du club →
-              
-            </button>
-          </div>
+            <div className="ed__badges">
+              <span className={`ed__cat ed__cat--${tone}`}>{cat}</span>
+              {isFull && (
+                <span className="ed__cat ed__cat--red">
+                  <Icon name="lock" size={12} />
+                  Complet
+                </span>
+              )}
+            </div>
+            <h1 className="ed__title">{event.titre || event.title}</h1>
+
+            {/* Meta Info */}
+            <dl className="ed__meta">
+              <div className="ed__meta-item">
+                <dt><Icon name="calendar" size={15} />Date</dt>
+                <dd>{formatDate(event.date)}</dd>
+              </div>
+              <div className="ed__meta-item">
+                <dt><Icon name="clock" size={15} />Heure</dt>
+                <dd>{formatTime(event.heure)} – {getEndTime(event.date_fin, event.heure_fin)}</dd>
+              </div>
+              <div className="ed__meta-item">
+                <dt><Icon name="pin" size={15} />Lieu</dt>
+                <dd>{event.lieu || 'Lieu TBA'}</dd>
+              </div>
+              <div className="ed__meta-item">
+                <dt><Icon name="landmark" size={15} />Club</dt>
+                <dd>{event.club_name || event.club || 'Club'}</dd>
+              </div>
+            </dl>
+
+            <h2 className="ed__h2">Description</h2>
+            <p className="ed__desc">{event.description}</p>
+          </article>
+
+          {/* Sidebar */}
+          <aside className="ed__side">
+            <section className={`ed__widget${isFull && userState !== 'registered' ? ' ed__widget--warn' : ''}`}>
+              <h2 className="ed__widget-title">Places disponibles</h2>
+
+              {event.statut === 'En attente' ? (
+                <div className="ed__pending">
+                  <Icon name="hourglass" size={26} />
+                  <div className="ed__pending-title">En attente d'approbation</div>
+                  <div className="ed__pending-text">
+                    Cet événement est en attente d'approbation de l'administrateur.
+                    <br />
+                    Les inscriptions seront ouvertes dès qu'il sera approuvé.
+                  </div>
+                </div>
+              ) : userState === 'waitlisted' ? (
+                // --- BLOC LISTE D'ATTENTE MIS À JOUR (Branche 3) ---
+                <>
+                  <div className="ed__row">
+                    <span className="ed__full">
+                      {event.inscrits ?? 0} / {totalPlaces} — Complet
+                    </span>
+                  </div>
+                  <div className="ed__bar">
+                    <div className="ed__bar-fill ed__bar-fill--gray" style={{ width: '100%' }} />
+                  </div>
+
+                  <div className="ed__wait">
+                    <div className="ed__wait-rank">
+                      Vous êtes N°{waitlistPosition ?? '?'}
+                    </div>
+                    <div className="ed__wait-text">
+                      sur la liste d'attente
+                      {waitlistTotal && <span> ({waitlistTotal} personnes)</span>}
+                      <br />
+                      Vous serez notifié dès qu'une place se libère.
+                    </div>
+
+                    {waitlistPosition && waitlistTotal && (
+                      <div className="ed__wait-progress">
+                        <div className="ed__wait-line">
+                          <span>Position</span>
+                          <span>{waitlistPosition} / {waitlistTotal}</span>
+                        </div>
+                        <div className="ed__bar ed__bar--thin">
+                          <div
+                            className="ed__bar-fill ed__bar-fill--amber"
+                            style={{ width: `${100 - ((waitlistPosition - 1) / waitlistTotal) * 100}%` }}
+                          />
+                        </div>
+                        <div className="ed__wait-next">
+                          {waitlistPosition === 1
+                            ? (<><Icon name="gift" size={14} />Prochain sur la liste !</>)
+                            : `${waitlistPosition - 1} personne(s) avant vous`}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="ed__btn ed__btn--ghost ed__btn--block"
+                    onClick={handleUnregister}
+                    disabled={registering}
+                  >
+                    Quitter la liste d'attente
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="ed__row">
+                    <span>{event.inscrits ?? 0} inscrits</span>
+                    <span className={isFull ? 'ed__left ed__left--none' : 'ed__left'}>
+                      {isFull ? `0 places` : `${event.places_disponibles ?? 0} restantes`}
+                    </span>
+                  </div>
+                  <div className="ed__bar">
+                    <div
+                      className={`ed__bar-fill${userState === 'registered' ? '' : ' ed__bar-fill--terra'}`}
+                      style={{ width: `${inscriptionPercentage}%` }}
+                    />
+                  </div>
+
+                  {userState === 'registered' ? (
+                    <>
+                      <button
+                        type="button"
+                        className="ed__btn ed__btn--primary ed__btn--block ed__btn--lg"
+                        onClick={handleUnregister}
+                        disabled={registering}
+                      >
+                        <Icon name="check" size={18} />
+                        Inscrit (Annuler ?)
+                      </button>
+                      <button
+                        type="button"
+                        className={`ed__btn ed__btn--block ${calendarAdded ? 'ed__btn--done' : 'ed__btn--outline'}`}
+                        onClick={handleAddToCalendar}
+                        disabled={addingToCalendar || calendarAdded}
+                      >
+                        {calendarAdded
+                          ? (<><Icon name="check" size={16} />Ajouté au Google Agenda</>)
+                          : addingToCalendar
+                            ? 'Ajout en cours...'
+                            : (<><Icon name="calendar" size={16} />Ajouter à Google Agenda</>)}
+                      </button>
+                      {calendarNotConnected && (
+                        <div className="ed__notice">
+                          <div className="ed__notice-title">
+                            <Icon name="calendar" size={15} />
+                            Google Agenda non connecté
+                          </div>
+                          <div className="ed__notice-text">
+                            Connectez votre compte pour ajouter vos événements automatiquement.
+                          </div>
+                          <button
+                            type="button"
+                            className="ed__btn ed__btn--amber ed__btn--block ed__btn--sm"
+                            onClick={() => navigate('/student/profile?tab=Préférences')}
+                          >
+                            Connecter Google Agenda
+                            <Icon name="arrowRight" size={14} />
+                          </button>
+                        </div>
+                      )}
+                      {calendarMsg && (
+                        <div
+                          className={`ed__alert ${calendarMsg.type === 'success' ? 'ed__alert--success' : 'ed__alert--error'}`}
+                          role="status"
+                        >
+                          {calendarMsg.text}
+                        </div>
+                      )}
+                    </>
+                  ) : isFull ? (
+                    <button
+                      type="button"
+                      className="ed__btn ed__btn--amber ed__btn--block ed__btn--lg"
+                      onClick={handleRegister}
+                      disabled={registering}
+                    >
+                      <Icon name="hourglass" size={18} />
+                      Rejoindre la liste d'attente
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="ed__btn ed__btn--terra ed__btn--block ed__btn--lg"
+                      onClick={handleRegister}
+                      disabled={registering}
+                    >
+                      S'inscrire à cet événement
+                    </button>
+                  )}
+                </>
+              )}
+            </section>
+
+            {/* Organizing Club Box */}
+            <section className="ed__widget">
+              <h2 className="ed__widget-title">Club organisateur</h2>
+              <div className="ed__club">
+                <div className={`ed__club-ico ed__cover--${tone}`}><Icon name={icon} size={22} /></div>
+                <div>
+                  <div className="ed__club-name">{event.club_name || 'Club'}</div>
+                  <div className="ed__club-count">{event.club_members_count ?? 0} membres</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="ed__btn ed__btn--soft ed__btn--block"
+                onClick={() => navigate(`/student/clubs/${event.club_id}`)}
+              >
+                Voir la page du club
+                <Icon name="arrowRight" size={14} />
+              </button>
+            </section>
+          </aside>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

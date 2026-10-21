@@ -9,6 +9,7 @@ import { getMyInscriptions } from '../../api/profil'
 import { unregisterEvent } from '../../api/events'
 import { getNotifications } from '../../api/notifications'
 import { getCalendarAuthUrl, getCalendarStatus, disconnectCalendar } from '../../api/googleCalendar'
+import { Icon } from './StudentIcons'
 
 const TABS = ['Mes inscriptions', 'Mes clubs', 'Messages', 'Notifications', 'Préférences']
 
@@ -53,13 +54,13 @@ function Profile() {
     const calendarParam = searchParams.get('calendar')
     if (calendarParam === 'success') {
       setCalendarConnected(true)
-      setCalendarMsg({ type: 'success', text: '✅ Google Agenda connecté avec succès !' })
+      setCalendarMsg({ type: 'success', text: 'Google Agenda connecté avec succès !' })
       setSearchParams({})
     } else if (calendarParam === 'denied') {
-      setCalendarMsg({ type: 'warning', text: "⚠️ Vous avez refusé l'accès à Google Agenda." })
+      setCalendarMsg({ type: 'warning', text: "Vous avez refusé l'accès à Google Agenda." })
       setSearchParams({})
     } else if (calendarParam === 'error') {
-      setCalendarMsg({ type: 'error', text: '❌ Erreur lors de la connexion à Google Agenda.' })
+      setCalendarMsg({ type: 'error', text: 'Erreur lors de la connexion à Google Agenda.' })
       setSearchParams({})
     }
   }, [])
@@ -162,82 +163,95 @@ function Profile() {
   }
 
   return (
-    <div className="profile-body">
+    <div className="pf">
       <Navbar />
 
-      <div className="profile-hero">
-        <div className="avatar-big">🎓</div>
-        <div>
-          <h2>{user?.name ?? '—'}</h2>
-          <p>Étudiant · {user?.email ?? '—'}</p>
+      <main className="pf__wrap">
+        <section className="pf__hero">
+          <div className="pf__avatar"><Icon name="graduation" size={34} /></div>
+          <div className="pf__hero-text">
+            <h1 className="pf__name">{user?.name ?? '—'}</h1>
+            <p className="pf__email">Étudiant · {user?.email ?? '—'}</p>
+          </div>
+        </section>
+
+        <div className="pf__tabs" role="tablist" aria-label="Sections du profil">
+          {TABS.map(tab => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab}
+              className={`pf__tab${activeTab === tab ? ' is-active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab}
+              {tab === 'Notifications' && unreadNotifCount > 0 && (
+                <span className="pf__count">{unreadNotifCount}</span>
+              )}
+            </button>
+          ))}
         </div>
-      </div>
 
-      <div className="profile-tabs">
-        {TABS.map(tab => (
-          <button
-            key={tab}
-            className={`profile-tab${activeTab === tab ? ' active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-            {tab === 'Messages' && <span className="msg-badge">2</span>}
-            {tab === 'Notifications' && unreadNotifCount > 0 && (
-              <span className="msg-badge">{unreadNotifCount}</span>
-            )}
-          </button>
-        ))}
-      </div>
+        <div className="pf__content" role="tabpanel">
+          {activeTab === 'Mes inscriptions' && <InscriptionsTab />}
+          {activeTab === 'Mes clubs' && <ClubsTab />}
+          {activeTab === 'Messages' && <MessagesTab />}
+          {activeTab === 'Notifications' && <NotificationsTab />}
+          {activeTab === 'Préférences' && (
+            <PreferencesTab
+              emailReminders={emailReminders}
+              loading={loading}
+              message={message}
+              error={error}
+              onToggle={handleToggle}
+              phone={phone}
+              onPhoneChange={setPhone}
+              onSavePhone={handleSavePhone}
+              phoneLoading={phoneLoading}
+              phoneMessage={phoneMessage}
+              phoneError={phoneError}
+              whatsappReminders={whatsappReminders}
+              whatsappLoading={whatsappLoading}
+              whatsappMessage={whatsappMessage}
+              whatsappError={whatsappError}
+              onToggleWhatsapp={handleToggleWhatsapp}
+              calendarConnected={calendarConnected}
+              calendarMsg={calendarMsg}
+              roleRequestMsg={roleRequestMsg}
+              roleRequestLoading={roleRequestLoading}
+              onRoleRequest={handleRoleRequest}
+              userRole={JSON.parse(localStorage.getItem('user') || 'null')?.role}
+              onCalendarConnect={async () => {
+                try {
+                  const res = await getCalendarAuthUrl()
+                  window.location.href = res.data.url
+                } catch {
+                  setCalendarMsg({ type: 'error', text: 'Impossible d\'obtenir le lien de connexion.' })
+                }
+              }}
+              onCalendarDisconnect={async () => {
+                try {
+                  await disconnectCalendar()
+                  setCalendarConnected(false)
+                  setCalendarMsg({ type: 'success', text: 'Google Agenda déconnecté.' })
+                } catch {
+                  setCalendarMsg({ type: 'error', text: 'Une erreur est survenue.' })
+                }
+              }}
+            />
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}
 
-      <div className="profile-content">
-        {activeTab === 'Mes inscriptions' && <InscriptionsTab />}
-        {activeTab === 'Mes clubs' && <ClubsTab />}
-        {activeTab === 'Messages' && <MessagesTab />}
-        {activeTab === 'Notifications' && <NotificationsTab />}
-        {activeTab === 'Préférences' && (
-          <PreferencesTab
-            emailReminders={emailReminders}
-            loading={loading}
-            message={message}
-            error={error}
-            onToggle={handleToggle}
-            phone={phone}
-            onPhoneChange={setPhone}
-            onSavePhone={handleSavePhone}
-            phoneLoading={phoneLoading}
-            phoneMessage={phoneMessage}
-            phoneError={phoneError}
-            whatsappReminders={whatsappReminders}
-            whatsappLoading={whatsappLoading}
-            whatsappMessage={whatsappMessage}
-            whatsappError={whatsappError}
-            onToggleWhatsapp={handleToggleWhatsapp}
-            calendarConnected={calendarConnected}
-            calendarMsg={calendarMsg}
-            roleRequestMsg={roleRequestMsg}
-            roleRequestLoading={roleRequestLoading}
-            onRoleRequest={handleRoleRequest}
-            userRole={JSON.parse(localStorage.getItem('user') || 'null')?.role}
-            onCalendarConnect={async () => {
-              try {
-                const res = await getCalendarAuthUrl()
-                window.location.href = res.data.url
-              } catch {
-                setCalendarMsg({ type: 'error', text: 'Impossible d\'obtenir le lien de connexion.' })
-              }
-            }}
-            onCalendarDisconnect={async () => {
-              try {
-                await disconnectCalendar()
-                setCalendarConnected(false)
-                setCalendarMsg({ type: 'success', text: 'Google Agenda déconnecté.' })
-              } catch {
-                setCalendarMsg({ type: 'error', text: 'Une erreur est survenue.' })
-              }
-            }}
-          />
-        )}
-      </div>
+function Msg({ type, children, className = '' }) {
+  const variant = type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'error'
+  return (
+    <div className={`pf__msg pf__msg--${variant} ${className}`.trim()} role="status">
+      {children}
     </div>
   )
 }
@@ -277,31 +291,21 @@ function InscriptionsTab() {
     }
   }
 
-  if (loading) return (
-    <p style={{ fontSize: '13px', color: '#7A7A8C', padding: '20px 0' }}>
-      Chargement...
-    </p>
-  )
+  if (loading) return <p className="pf__muted" role="status">Chargement...</p>
 
-  if (error) return (
-    <p style={{ fontSize: '13px', color: '#E94560', padding: '20px 0' }}>
-      {error}
-    </p>
-  )
+  if (error) return <p className="pf__muted pf__muted--error" role="alert">{error}</p>
 
   return (
     <>
       {/* ── Événements à venir ── */}
-      <div className="section-header"><h3>Événements à venir</h3></div>
+      <div className="pf__section"><h2>Événements à venir</h2></div>
 
       {upcoming.length === 0 ? (
-        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>
-          Aucune inscription à venir.
-        </p>
+        <p className="pf__muted">Aucune inscription à venir.</p>
       ) : (
         <>
-          <div className="table-wrap">
-            <table>
+          <div className="pf__table-wrap">
+            <table className="pf__table">
               <thead>
                 <tr>
                   <th>Événement</th>
@@ -327,11 +331,11 @@ function InscriptionsTab() {
                     {/* Statut — badge vert ou orange */}
                     <td>
                       {event.statut === 'waitlisted' ? (
-                        <span className="badge badge-waiting">
+                        <span className="pf__badge pf__badge--waiting">
                           Liste d'attente · Position {event.position}
                         </span>
                       ) : (
-                        <span className="badge badge-approved">Inscrit</span>
+                        <span className="pf__badge pf__badge--ok">Inscrit</span>
                       )}
                     </td>
 
@@ -339,14 +343,16 @@ function InscriptionsTab() {
                     <td>
                       {event.statut === 'registered' ? (
                         <button
-                          className="btn-danger"
+                          type="button"
+                          className="pf__btn pf__btn--danger"
                           onClick={() => handleCancel(event.id)}
                         >
                           Annuler
                         </button>
                       ) : (
                         <button
-                          className="btn-ghost"
+                          type="button"
+                          className="pf__btn pf__btn--ghost"
                           onClick={() => navigate(`/student/events/${event.id}`)}
                         >
                           Voir
@@ -364,9 +370,9 @@ function InscriptionsTab() {
           {upcoming
             .filter(e => e.statut === 'waitlisted')
             .map(e => (
-              <div className="waiting-banner" key={e.id}>
-                <div className="wb-icon">⏳</div>
-                <div className="wb-text">
+              <div className="pf__waiting" key={e.id}>
+                <div className="pf__waiting-icon"><Icon name="hourglass" size={22} /></div>
+                <div className="pf__waiting-text">
                   <strong>
                     Vous êtes N°{e.position} sur la liste d'attente — {e.titre}
                   </strong>
@@ -382,17 +388,15 @@ function InscriptionsTab() {
       )}
 
       {/* ── Historique ── */}
-      <div className="section-header" style={{ marginTop: '32px' }}>
-        <h3>Historique (événements passés)</h3>
+      <div className="pf__section pf__section--spaced">
+        <h2>Historique (événements passés)</h2>
       </div>
 
       {past.length === 0 ? (
-        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>
-          Aucun événement passé.
-        </p>
+        <p className="pf__muted">Aucun événement passé.</p>
       ) : (
-        <div className="table-wrap">
-          <table>
+        <div className="pf__table-wrap">
+          <table className="pf__table">
             <thead>
               <tr>
                 <th>Événement</th>
@@ -404,8 +408,10 @@ function InscriptionsTab() {
               {past.map(event => (
                 <tr
                   key={event.id}
-                  style={{ cursor: 'pointer' }}
+                  className="pf__row-link"
+                  tabIndex={0}
                   onClick={() => navigate(`/student/events/${event.id}`)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/student/events/${event.id}`) }}
                 >
                   <td>{event.titre}</td>
                   <td>{formatDate(event.date)}</td>
@@ -435,21 +441,23 @@ function ClubsTab() {
 
   return (
     <>
-      <div className="section-header"><h3>Mes clubs</h3></div>
+      <div className="pf__section"><h2>Mes clubs</h2></div>
       {loading ? (
-        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>Chargement...</p>
+        <p className="pf__muted" role="status">Chargement...</p>
       ) : clubs.length === 0 ? (
-        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>Vous n'êtes membre d'aucun club.</p>
+        <p className="pf__muted">Vous n'êtes membre d'aucun club.</p>
       ) : (
-        clubs.map(club => (
-          <div className="club-row" key={club.id}>
-            <div className="club-em">{club.emoji || '🏛️'}</div>
-            <div>
-              <div className="club-name">{club.nom}</div>
-              <div className="club-meta">{club.membres_count ?? 0} membres</div>
+        <div className="pf__clubs">
+          {clubs.map(club => (
+            <div className="pf__club" key={club.id}>
+              <div className="pf__club-ico">{club.emoji || <Icon name="landmark" size={24} />}</div>
+              <div>
+                <div className="pf__club-name">{club.nom}</div>
+                <div className="pf__club-meta">{club.membres_count ?? 0} membres</div>
+              </div>
             </div>
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </>
   )
@@ -523,58 +531,36 @@ function MessagesTab() {
   const formatDate = (d) =>
     new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 
-  const getCategoryColor = (category) => {
-    const colors = {
-      'Technologie': '#E6F0FF',
-      'Culture': '#FFE6F0',
-      'Environnement': '#E6FFE6',
-      'Art': '#F0E6FF',
-      'Sport': '#E6FFFA',
-    }
-    return colors[category] || '#F4F4F6'
-  }
-
-  const getCategoryEmoji = (category) => {
-    const emojis = {
-      'Technologie': '💡',
-      'Culture': '🎭',
-      'Environnement': '🌱',
-      'Art': '🎵',
-      'Sport': '⚽',
-    }
-    return emojis[category] || '🏛️'
-  }
-
   return (
     <>
-      <div className="section-header"><h3>Mes messages reçus</h3></div>
+      <div className="pf__section"><h2>Mes messages reçus</h2></div>
       {loading ? (
-        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>Chargement des messages...</p>
+        <p className="pf__muted" role="status">Chargement des messages...</p>
       ) : receivedMessages.length === 0 ? (
-        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>Aucun message reçu.</p>
+        <p className="pf__muted">Aucun message reçu.</p>
       ) : (
-        <div className="table-wrap">
+        <div className="pf__list">
           {receivedMessages.map((msg, idx) => (
-            <div key={idx} className={`msg-row${!msg.read_at ? ' msg-unread' : ''}`}>
-              <div className="msg-club-icon" style={{ background: getCategoryColor(msg.club_category) }}>
-                {getCategoryEmoji(msg.club_category)}
-              </div>
-              <div className="msg-body" onClick={() => handleReply(msg)} style={{ cursor: 'pointer' }}>
-<div className="msg-club">
-  {msg.sender_name || 'Organisateur'}
-</div>                <div className="msg-subject">{msg.subject || msg.content?.substring(0, 50)}</div>
-                <div className="msg-preview">{msg.content?.substring(0, 100) || 'Aucun contenu'}…</div>
-              </div>
-              <div className="msg-meta">
-                <div className="msg-date">{formatDate(msg.sent_at || msg.created_at)}</div>
-                {!msg.read_at && <div className="unread-dot" />}
+            <div key={idx} className={`pf__item${!msg.read_at ? ' is-unread' : ''}`}>
+              <div className="pf__item-ico"><Icon name="mail" size={18} /></div>
+              <div className="pf__item-body">
                 <button
-                  className="btn-ghost"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleReply(msg)
-                  }}
-                  style={{ fontSize: '11px', padding: '3px 10px' }}
+                  type="button"
+                  className="pf__item-open"
+                  onClick={() => handleReply(msg)}
+                >
+                  <span className="pf__item-from">{msg.sender_name || 'Organisateur'}</span>
+                  <span className="pf__item-subject">{msg.subject || msg.content?.substring(0, 50)}</span>
+                  <span className="pf__item-preview">{msg.content?.substring(0, 100) || 'Aucun contenu'}…</span>
+                </button>
+              </div>
+              <div className="pf__item-meta">
+                <div className="pf__item-date">{formatDate(msg.sent_at || msg.created_at)}</div>
+                {!msg.read_at && <div className="pf__dot" role="img" aria-label="Non lu" />}
+                <button
+                  type="button"
+                  className="pf__btn pf__btn--ghost"
+                  onClick={() => handleReply(msg)}
                 >
                   Répondre
                 </button>
@@ -603,30 +589,33 @@ function NotificationsTab() {
 
   return (
     <>
-      <div className="section-header"><h3>Mes notifications</h3></div>
+      <div className="pf__section"><h2>Mes notifications</h2></div>
       {loading ? (
-        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>Chargement...</p>
+        <p className="pf__muted" role="status">Chargement...</p>
       ) : notifications.length === 0 ? (
-        <p style={{ fontSize: '13px', color: '#7A7A8C' }}>Aucune notification.</p>
+        <p className="pf__muted">Aucune notification.</p>
       ) : (
-        <div className="table-wrap">
-          {notifications.map(n => (
-            <div key={n.id} className={`msg-row${!n.read_at ? ' msg-unread' : ''}`}>
-              <div className="msg-club-icon" style={{ background: n.type?.includes('Refusee') ? '#FFE6E6' : '#E6FAF0' }}>
-                {n.type?.includes('Refusee') ? '❌' : '✅'}
+        <div className="pf__list">
+          {notifications.map(n => {
+            const refused = n.type?.includes('Refusee')
+            return (
+              <div key={n.id} className={`pf__item${!n.read_at ? ' is-unread' : ''}`}>
+                <div className={`pf__item-ico ${refused ? 'pf__item-ico--red' : 'pf__item-ico--green'}`}>
+                  <Icon name={refused ? 'xCircle' : 'checkCircle'} size={18} />
+                </div>
+                <div className="pf__item-body">
+                  <div className="pf__item-subject">{n.data?.message}</div>
+                  {n.data?.club_nom && (
+                    <div className="pf__item-from">{n.data.club_nom}</div>
+                  )}
+                </div>
+                <div className="pf__item-meta">
+                  <div className="pf__item-date">{n.created_at ? formatDate(n.created_at) : ''}</div>
+                  {!n.read_at && <div className="pf__dot" role="img" aria-label="Non lu" />}
+                </div>
               </div>
-              <div className="msg-body">
-                <div className="msg-subject">{n.data?.message}</div>
-                {n.data?.club_nom && (
-                  <div className="msg-club">{n.data.club_nom}</div>
-                )}
-              </div>
-              <div className="msg-meta">
-                <div className="msg-date">{n.created_at ? formatDate(n.created_at) : ''}</div>
-                {!n.read_at && <div className="unread-dot" />}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </>
@@ -638,74 +627,65 @@ function PreferencesTab({ emailReminders, loading, message, error, onToggle, pho
     <>
       {userRole === 'etudiant' && (
         <>
-          <div className="section-header"><h3>Rôle</h3></div>
-          <div className="notif-card">
-            <div className="notif-card-title">🏛️ Devenir organisateur</div>
-            <p style={{ fontSize: '13px', color: '#7A7A8C', margin: '8px 0 16px' }}>
+          <div className="pf__section"><h2>Rôle</h2></div>
+          <div className="pf__card">
+            <div className="pf__card-title"><Icon name="landmark" size={18} />Devenir organisateur</div>
+            <p className="pf__card-text">
               Vous souhaitez créer et gérer des événements ? Envoyez une demande à l'administrateur pour obtenir le rôle organisateur.
             </p>
             <button
+              type="button"
+              className="pf__btn pf__btn--primary"
               onClick={onRoleRequest}
               disabled={roleRequestLoading}
-              style={{
-                background: '#E94560', color: 'white', border: 'none',
-                borderRadius: '8px', padding: '9px 20px', fontSize: '13px',
-                fontWeight: 600, cursor: roleRequestLoading ? 'not-allowed' : 'pointer',
-                opacity: roleRequestLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif",
-              }}
             >
               {roleRequestLoading ? 'Envoi en cours…' : 'Devenir organisateur'}
             </button>
             {roleRequestMsg && (
-              <div className={`profile-msg ${
-                roleRequestMsg.type === 'success' ? 'profile-msg--success'
-                : roleRequestMsg.type === 'warning' ? 'profile-msg--warning'
-                : 'profile-msg--error'
-              }`} style={{ marginTop: '12px' }}>
-                {roleRequestMsg.text}
-              </div>
+              <Msg type={roleRequestMsg.type} className="pf__msg--in">{roleRequestMsg.text}</Msg>
             )}
           </div>
         </>
       )}
 
-      <div className="section-header"><h3>Coordonnées</h3></div>
-      <div className="notif-card">
-        <div className="notif-card-title">📱 Numéro de téléphone</div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '12px' }}>
+      <div className="pf__section"><h2>Coordonnées</h2></div>
+      <div className="pf__card">
+        <div className="pf__card-title"><Icon name="phone" size={18} />Numéro de téléphone</div>
+        <div className="pf__phone">
           <input
             type="tel"
+            className="pf__input"
+            aria-label="Numéro de téléphone"
             placeholder="+212620080504"
             value={phone}
             onChange={(e) => onPhoneChange(e.target.value)}
-            style={{ flex: 1, border: '1.5px solid #E0E0E6', borderRadius: '8px', padding: '9px 12px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
-            onFocus={(e) => e.target.style.borderColor = '#E94560'}
-            onBlur={(e) => e.target.style.borderColor = '#E0E0E6'}
           />
           <button
+            type="button"
+            className="pf__btn pf__btn--primary"
             onClick={onSavePhone}
             disabled={phoneLoading}
-            style={{ background: '#E94560', color: 'white', border: 'none', borderRadius: '8px', padding: '9px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}
           >
             {phoneLoading ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         </div>
-        {phoneMessage && <div className="profile-msg profile-msg--success" style={{ marginTop: '8px' }}>{phoneMessage}</div>}
-        {phoneError && <div className="profile-msg profile-msg--error" style={{ marginTop: '8px' }}>{phoneError}</div>}
+        {phoneMessage && <Msg type="success" className="pf__msg--in">{phoneMessage}</Msg>}
+        {phoneError && <Msg type="error" className="pf__msg--in">{phoneError}</Msg>}
       </div>
 
-      <div className="section-header" style={{ marginTop: '28px' }}><h3>Préférences de notifications</h3></div>
-      <div className="notif-card">
-        <div className="notif-card-title">🔔 Notifications par email</div>
+      <div className="pf__section pf__section--spaced"><h2>Préférences de notifications</h2></div>
+      <div className="pf__card">
+        <div className="pf__card-title"><Icon name="bell" size={18} />Notifications par email</div>
 
         {/* Live toggle — EP-178 */}
-        <div className="toggle-row">
+        <div className="pf__toggle-row">
           <div>
-            <div className="toggle-label">Recevoir les rappels d'événements par email</div>
-            <div className="toggle-sub">Un email de rappel est envoyé la veille (J-1) de chaque événement auquel vous êtes inscrit</div>
+            <div className="pf__toggle-label">Recevoir les rappels d'événements par email</div>
+            <div className="pf__toggle-sub">Un email de rappel est envoyé la veille (J-1) de chaque événement auquel vous êtes inscrit</div>
           </div>
           <button
-            className={`toggle${emailReminders ? '' : ' off'}`}
+            type="button"
+            className={`pf__toggle${emailReminders ? '' : ' is-off'}`}
             onClick={onToggle}
             disabled={loading}
             aria-pressed={emailReminders}
@@ -714,107 +694,93 @@ function PreferencesTab({ emailReminders, loading, message, error, onToggle, pho
         </div>
 
         {/* Static rows */}
-        <div className="toggle-row">
+        <div className="pf__toggle-row">
           <div>
-            <div className="toggle-label">Être notifié quand une place se libère</div>
-            <div className="toggle-sub">Email automatique si vous êtes en liste d'attente et qu'une place devient disponible (valable 24h)</div>
+            <div className="pf__toggle-label">Être notifié quand une place se libère</div>
+            <div className="pf__toggle-sub">Email automatique si vous êtes en liste d'attente et qu'une place devient disponible (valable 24h)</div>
           </div>
-          <div className="toggle" />
+          <div className="pf__toggle pf__toggle--static" aria-hidden="true" />
         </div>
-        <div className="toggle-row">
+        <div className="pf__toggle-row">
           <div>
-            <div className="toggle-label">Recevoir les messages des clubs</div>
-            <div className="toggle-sub">Notifications email pour les messages envoyés par vos clubs</div>
+            <div className="pf__toggle-label">Recevoir les messages des clubs</div>
+            <div className="pf__toggle-sub">Notifications email pour les messages envoyés par vos clubs</div>
           </div>
-          <div className="toggle off" />
+          <div className="pf__toggle pf__toggle--static is-off" aria-hidden="true" />
         </div>
       </div>
 
-      {message && <div className="profile-msg profile-msg--success">{message}</div>}
-      {error && <div className="profile-msg profile-msg--error">{error}</div>}
+      {message && <Msg type="success">{message}</Msg>}
+      {error && <Msg type="error">{error}</Msg>}
 
-      <div className="notif-card" style={{ marginTop: '12px' }}>
-        <div className="notif-card-title">💬 Rappels WhatsApp</div>
-        <div className="toggle-row">
+      <div className="pf__card pf__card--next">
+        <div className="pf__card-title"><Icon name="message" size={18} />Rappels WhatsApp</div>
+        <div className="pf__toggle-row">
           <div>
-            <div className="toggle-label">Recevoir les rappels d'événements par WhatsApp</div>
-            <div className="toggle-sub">Un message WhatsApp est envoyé la veille (J-1) de chaque événement auquel vous êtes inscrit</div>
+            <div className="pf__toggle-label">Recevoir les rappels d'événements par WhatsApp</div>
+            <div className="pf__toggle-sub">Un message WhatsApp est envoyé la veille (J-1) de chaque événement auquel vous êtes inscrit</div>
           </div>
           <button
-            className={`toggle${whatsappReminders ? '' : ' off'}`}
+            type="button"
+            className={`pf__toggle${whatsappReminders ? '' : ' is-off'}`}
             onClick={onToggleWhatsapp}
             disabled={whatsappLoading}
             aria-pressed={whatsappReminders}
             aria-label="Activer ou désactiver les rappels WhatsApp"
           />
         </div>
-        {whatsappMessage && <div className="profile-msg profile-msg--success" style={{ marginTop: '8px' }}>{whatsappMessage}</div>}
-        {whatsappError && <div className="profile-msg profile-msg--error" style={{ marginTop: '8px' }}>{whatsappError}</div>}
+        {whatsappMessage && <Msg type="success" className="pf__msg--in">{whatsappMessage}</Msg>}
+        {whatsappError && <Msg type="error" className="pf__msg--in">{whatsappError}</Msg>}
       </div>
 
       {/* ── Google Agenda ── */}
-      <div className="section-header" style={{ marginTop: '28px' }}><h3>Intégrations</h3></div>
-      <div className="notif-card">
-        <div className="notif-card-title">📅 Google Agenda</div>
-        <div className="toggle-row" style={{ alignItems: 'center' }}>
+      <div className="pf__section pf__section--spaced"><h2>Intégrations</h2></div>
+      <div className="pf__card">
+        <div className="pf__card-title"><Icon name="calendar" size={18} />Google Agenda</div>
+        <div className="pf__toggle-row">
           <div>
-            <div className="toggle-label">Synchroniser avec Google Agenda</div>
-            <div className="toggle-sub">
+            <div className="pf__toggle-label">Synchroniser avec Google Agenda</div>
+            <div className="pf__toggle-sub">
               {calendarConnected
                 ? 'Votre Google Agenda est connecté.'
                 : 'Connectez votre Google Agenda pour ajouter automatiquement les événements auxquels vous vous inscrivez.'}
             </div>
           </div>
           <button
+            type="button"
+            className={`pf__btn ${calendarConnected ? 'pf__btn--ghost' : 'pf__btn--primary'} pf__btn--nowrap`}
             onClick={calendarConnected ? onCalendarDisconnect : onCalendarConnect}
-            style={{
-              padding: '9px 18px',
-              borderRadius: '8px',
-              border: calendarConnected ? '1.5px solid #E0E0E6' : 'none',
-              background: calendarConnected ? 'white' : 'linear-gradient(135deg, #4285F4, #1a73e8)',
-              color: calendarConnected ? '#7A7A8C' : 'white',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-              fontFamily: "'DM Sans', sans-serif",
-            }}
           >
-            {calendarConnected ? 'Déconnecter' : '🔗 Connecter'}
+            {calendarConnected ? 'Déconnecter' : (<><Icon name="link" size={16} />Connecter</>)}
           </button>
         </div>
         {calendarConnected && (
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#2ECC71', fontWeight: 600 }}>
-            ✅ Connecté
+          <div className="pf__connected">
+            <Icon name="checkCircle" size={16} />
+            Connecté
           </div>
         )}
       </div>
 
-      {calendarMsg && (
-        <div className={`profile-msg ${
-          calendarMsg.type === 'success' ? 'profile-msg--success'
-          : calendarMsg.type === 'warning' ? 'profile-msg--warning'
-          : 'profile-msg--error'
-        }`}>
-          {calendarMsg.text}
-        </div>
-      )}
+      {calendarMsg && <Msg type={calendarMsg.type}>{calendarMsg.text}</Msg>}
 
-      <div className="email-preview-label">Aperçu de l'email de rappel</div>
-      <div className="email-preview">
-        <div className="email-preview-header">📧 Objet : Rappel — Conférence Intelligence Artificielle est demain !</div>
-        <div className="email-preview-subject">Rappel — Conférence Intelligence Artificielle est demain !</div>
-        <div className="email-preview-body">
-          <div className="email-preview-logo">Event<span>Campus</span></div>
-          <div className="email-preview-event">Conférence Intelligence Artificielle</div>
-          <div className="email-preview-meta">
-            📅 Vendredi 4 avril 2025<br />
-            🕐 14h00 – 17h00<br />
-            📍 Amphi A, Bâtiment Principal
+      <div className="pf__preview-label">Aperçu de l'email de rappel</div>
+      <div className="pf__preview">
+        <div className="pf__preview-head">
+          <Icon name="mail" size={14} />
+          Objet : Rappel — Conférence Intelligence Artificielle est demain !
+        </div>
+        <div className="pf__preview-subject">Rappel — Conférence Intelligence Artificielle est demain !</div>
+        <div className="pf__preview-body">
+          <div className="pf__preview-logo">Event<span>Campus</span></div>
+          <div className="pf__preview-event">Conférence Intelligence Artificielle</div>
+          <div className="pf__preview-meta">
+            <span><Icon name="calendar" size={14} />Vendredi 4 avril 2025</span>
+            <span><Icon name="clock" size={14} />14h00 – 17h00</span>
+            <span><Icon name="pin" size={14} />Amphi A, Bâtiment Principal</span>
           </div>
-          <button className="email-cta">Voir l'événement</button>
-          <div className="email-unsub">Se désinscrire des rappels</div>
+          <button type="button" className="pf__btn pf__btn--primary pf__preview-cta">Voir l'événement</button>
+          <div className="pf__preview-unsub">Se désinscrire des rappels</div>
         </div>
       </div>
     </>

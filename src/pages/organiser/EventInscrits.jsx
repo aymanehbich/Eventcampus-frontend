@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getEvent, getEventInscrits } from '../../api/events'
+import DashboardLayout from '../../components/DashboardLayout'
+import { ArrowLeftIcon } from './OrganiserIcons'
+import './Organiser.css'
 
 export default function EventInscrits() {
   const { id } = useParams()
@@ -41,112 +44,90 @@ export default function EventInscrits() {
     ? Math.round(((event?.inscrits ?? 0) / totalPlaces) * 100)
     : 0
 
-  const s = {
-    layout: { display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" },
-    sidebar: { background: '#1A1A2E', padding: '24px 0' },
-    logo: { fontFamily: "'Fraunces', serif", fontSize: '18px', color: 'white', padding: '0 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '16px' },
-    navItem: { padding: '11px 20px', fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.55)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' },
-    navActive: { padding: '11px 20px', fontSize: '13px', fontWeight: 500, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(233,69,96,0.15)', borderRight: '3px solid #E94560' },
-    main: { padding: '32px', background: '#F4F4F6', minHeight: '100vh' },
-    progressBox: { background: 'white', borderRadius: '12px', border: '1.5px solid #E0E0E6', padding: '18px 22px', marginBottom: '22px', display: 'flex', alignItems: 'center', gap: '24px' },
-    bar: { background: '#E0E0E6', borderRadius: '4px', height: '10px', overflow: 'hidden', flex: 1 },
-    tableWrap: { background: 'white', borderRadius: '12px', border: '1.5px solid #E0E0E6', overflow: 'hidden' },
-  }
+  const backButton = (
+    <button type="button" className="ec-btn ec-btn--ghost" onClick={() => navigate('/organiser/events')}>
+      <ArrowLeftIcon size={16} /> Retour aux événements
+    </button>
+  )
 
   if (loading) return (
-    <div style={s.layout}>
-      <Sidebar navigate={navigate} s={s} />
-      <div style={{ ...s.main, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
-    </div>
+    <DashboardLayout active="events" title="Inscrits" actions={backButton}>
+      <div className="ec-state" role="status" aria-live="polite">Chargement...</div>
+    </DashboardLayout>
   )
 
   if (error || !event) return (
-    <div style={s.layout}>
-      <Sidebar navigate={navigate} s={s} />
-      <div style={{ ...s.main, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E94560', fontSize: '14px' }}>{error || 'Événement introuvable.'}</div>
-    </div>
+    <DashboardLayout active="events" title="Inscrits" actions={backButton}>
+      <div className="ec-state ec-state--error" role="alert">{error || 'Événement introuvable.'}</div>
+    </DashboardLayout>
   )
 
   return (
-    <div style={s.layout}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700;900&display=swap" rel="stylesheet" />
-      <Sidebar navigate={navigate} s={s} />
-
-      <div style={s.main}>
-        {/* Header */}
-        <div style={{ marginBottom: '24px' }}>
-          <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', color: '#1A1A2E' }}>
-            Inscrits — {event.titre}
-          </h2>
-          <div style={{ fontSize: '13px', color: '#7A7A8C', marginTop: '4px' }}>
-            {formatDate(event.date)} · {event.heure?.substring(0, 5)} · {event.lieu}
+    <DashboardLayout
+      active="events"
+      title={`Inscrits — ${event.titre}`}
+      subtitle={`${formatDate(event.date)} · ${event.heure?.substring(0, 5)} · ${event.lieu}`}
+      actions={backButton}
+    >
+      {/* Résumé */}
+      <section className="ec-card ec-card--sand og__summary" aria-label="Résumé des inscriptions">
+        <div>
+          <div className="og__summary-num">{event.inscrits ?? 0}</div>
+          <div className="og__summary-label">inscrits</div>
+        </div>
+        <div className="og__summary-bar">
+          <div
+            className="og__bar"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={totalPlaces}
+            aria-valuenow={event.inscrits ?? 0}
+            aria-label="Taux de remplissage"
+          >
+            <div className="og__bar-fill" style={{ width: `${fillPct}%` }} />
           </div>
         </div>
-
-        {/* Progress box */}
-        <div style={s.progressBox}>
-          <div>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '28px', color: '#1A1A2E' }}>{event.inscrits ?? 0}</div>
-            <div style={{ fontSize: '12px', color: '#7A7A8C' }}>inscrits</div>
-          </div>
-          <div style={s.bar}>
-            <div style={{ height: '100%', background: '#E94560', borderRadius: '4px', width: `${fillPct}%` }} />
-          </div>
-          <div>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '28px', color: '#E94560' }}>{event.places_disponibles ?? 0}</div>
-            <div style={{ fontSize: '12px', color: '#E94560', fontWeight: 700 }}>places restantes</div>
-          </div>
-          <div>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '28px', color: '#1A1A2E' }}>{totalPlaces}</div>
-            <div style={{ fontSize: '12px', color: '#7A7A8C' }}>places au total</div>
-          </div>
+        <div>
+          <div className="og__summary-num og__summary-num--terra">{event.places_disponibles ?? 0}</div>
+          <div className="og__summary-label">places restantes</div>
         </div>
+        <div>
+          <div className="og__summary-num">{totalPlaces}</div>
+          <div className="og__summary-label">places au total</div>
+        </div>
+      </section>
 
-        {/* Table */}
-        <div style={s.tableWrap}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-            <thead>
+      {/* Table */}
+      <div className="ec-table-wrap">
+        <table className="ec-table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Nom</th>
+              <th scope="col">E-mail</th>
+              <th scope="col">Date d'inscription</th>
+            </tr>
+          </thead>
+          <tbody>
+            {inscrits.length === 0 ? (
               <tr>
-                {['#', 'Nom', 'E-mail', "Date d'inscription"].map(h => (
-                  <th key={h} style={{ background: '#F4F4F6', padding: '10px 16px', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#7A7A8C', fontWeight: 600 }}>{h}</th>
-                ))}
+                <td colSpan={4}>
+                  <div className="ec-state">Aucun inscrit pour le moment.</div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {inscrits.length === 0 ? (
-                <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', color: '#7A7A8C', fontSize: '13px', padding: '32px' }}>
-                    Aucun inscrit pour le moment.
-                  </td>
+            ) : (
+              inscrits.map((p, i) => (
+                <tr key={p.id}>
+                  <td className="og__num-cell">{i + 1}</td>
+                  <td>{p.name}</td>
+                  <td>{p.email}</td>
+                  <td>{formatInscriptionDate(p.inscrit_le)}</td>
                 </tr>
-              ) : (
-                inscrits.map((p, i) => (
-                  <tr key={p.id}>
-                    <td style={{ padding: '13px 16px', borderBottom: i < inscrits.length - 1 ? '1px solid #E0E0E6' : 'none', color: '#7A7A8C', fontSize: '12px' }}>{i + 1}</td>
-                    <td style={{ padding: '13px 16px', borderBottom: i < inscrits.length - 1 ? '1px solid #E0E0E6' : 'none', color: '#1A1A2E' }}>{p.name}</td>
-                    <td style={{ padding: '13px 16px', borderBottom: i < inscrits.length - 1 ? '1px solid #E0E0E6' : 'none', color: '#1A1A2E' }}>{p.email}</td>
-                    <td style={{ padding: '13px 16px', borderBottom: i < inscrits.length - 1 ? '1px solid #E0E0E6' : 'none', color: '#1A1A2E' }}>{formatInscriptionDate(p.inscrit_le)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
-    </div>
-  )
-}
-
-function Sidebar({ navigate, s }) {
-  return (
-    <div style={s.sidebar}>
-      <div style={s.logo}>Event<span style={{ color: '#E94560' }}>Campus</span></div>
-      <div style={s.navItem} onClick={() => navigate('/organiser/dashboard')}>📊 Dashboard</div>
-      <div style={s.navItem} onClick={() => navigate('/organiser/club')}>🏛️ Mon club</div>
-      <div style={s.navActive}>📅 Mes événements</div>
-      <div style={s.navItem} onClick={() => navigate('/organiser/membres')}>👥 Membres</div>
-      <div className="messaging-nav-item" onClick={() => navigate('/organiser/messages')}>✉️ Messages</div>
-
-    </div>
+    </DashboardLayout>
   )
 }

@@ -1,142 +1,34 @@
-.adhesions-layout {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  min-height: 100vh;
-  font-family: 'DM Sans', sans-serif;
-}
+.ad { font-family: var(--ec-font); color: var(--ec-ink); }
+.ad *, .ad *::before, .ad *::after { box-sizing: border-box; }
+.ad button { font-family: var(--ec-font); }
 
-.adhesions-sidebar {
-  background: #1A1A2E;
-  padding: 24px 0;
-  position: relative;
-}
+.ad__title { margin: 0 0 14px; display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 600; color: var(--ec-green); }
+.ad__members { margin-top: 36px; }
 
-.adhesions-logo {
-  font-family: 'Fraunces', serif;
-  font-size: 18px;
-  color: white;
-  padding: 0 20px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 16px;
+.ad__queue {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 10px; padding: 14px 18px;
+  background: var(--ec-card); border: 1px solid var(--ec-card-line); border-radius: var(--ec-radius-lg);
 }
+.ad__avatar { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; background: var(--ec-mint); color: var(--ec-green-dark); font-size: 15px; font-weight: 600; }
+.ad__avatar--sm { width: 32px; height: 32px; font-size: 13px; background: var(--ec-sand); }
+.ad__info { flex: 1; min-width: 0; }
+.ad__name { margin: 0 0 2px; font-size: 14px; font-weight: 600; color: var(--ec-ink); }
+.ad__meta { margin: 0; font-size: 12.5px; color: var(--ec-muted); overflow-wrap: anywhere; }
+.ad__actions { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
 
-.adhesions-logo span {
-  color: #E94560;
-}
+.ad__empty { padding: 20px; font-size: 14px; color: var(--ec-muted); text-align: center; }
+.ad__skeletons { display: flex; flex-direction: column; gap: 10px; }
+.ad__sk { height: 72px; }
 
-.adhesions-nav-item {
-  padding: 11px 20px;
-  font-size: 13px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.55);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.ad__member { display: flex; align-items: center; gap: 10px; }
+.ad__member-name { font-weight: 600; }
+.ad__muted { color: var(--ec-muted); }
+.ad__nowrap { white-space: nowrap; }
+.ad__table td .ec-badge { white-space: nowrap; }
 
-.adhesions-nav-item.active {
-  background: rgba(233, 69, 96, 0.15);
-  color: white;
-  border-right: 3px solid #E94560;
-}
-
-.adhesions-main {
-  padding: 32px;
-  background: #F4F4F6;
-}
-
-.adhesions-top {
-  margin-bottom: 24px;
-}
-
-.adhesions-top h2 {
-  font-family: 'Fraunces', serif;
-  font-size: 22px;
-  color: #1A1A2E;
-}
-
-.adhesions-section-title {
-  font-family: 'Fraunces', serif;
-  font-size: 16px;
-  color: #1A1A2E;
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.adhesions-badge {
-  background: rgba(233, 69, 96, 0.12);
-  color: #E94560;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 2px 9px;
-  border-radius: 20px;
-}
-
-.adhesions-queue-item {
-  background: white;
-  border: 1.5px solid #E0E0E6;
-  border-radius: 12px;
-  padding: 16px 20px;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.adhesions-info h4 {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1A1A2E;
-  margin-bottom: 3px;
-}
-
-.adhesions-info p {
-  font-size: 12px;
-  color: #7A7A8C;
-}
-
-.adhesions-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.adhesions-btn {
-  padding: 7px 16px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  font-family: 'DM Sans', sans-serif;
-}
-
-.adhesions-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.adhesions-btn-success {
-  background: #2ECC71;
-  color: white;
-}
-
-.adhesions-btn-danger {
-  background: transparent;
-  color: #E94560;
-  border: 1.5px solid #E94560;
-}
-
-.adhesions-muted {
-  font-size: 13px;
-  color: #7A7A8C;
-  padding: 12px 0;
-}
-
-.adhesions-error {
-  font-size: 13px;
-  color: #E94560;
-  padding: 12px 0;
+@media (max-width: 640px) {
+  .ad__queue { flex-wrap: wrap; }
+  .ad__info { flex-basis: calc(100% - 60px); }
+  .ad__actions { width: 100%; }
+  .ad__actions .ec-btn { flex: 1; }
 }

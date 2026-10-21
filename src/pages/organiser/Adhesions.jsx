@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getPendingAdhesions, accepterAdhesion, refuserAdhesion, getClubUser } from '../../api/clubs'
+import DashboardLayout from '../../components/DashboardLayout'
 import './Adhesions.css'
+
+function Icon({ children, size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {children}
+    </svg>
+  )
+}
 
 export default function Adhesions() {
   const navigate = useNavigate()
@@ -56,177 +65,123 @@ export default function Adhesions() {
     return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
-  
-  const s = {
-    layout: { display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" },
-    sidebar: { background: '#1A1A2E', padding: '24px 0' },
-    logo: { fontFamily: "'Fraunces', serif", fontSize: '18px', color: 'white', padding: '0 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '16px' },
-    navItem: { padding: '11px 20px', fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.55)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' },
-    navActive: { padding: '11px 20px', fontSize: '13px', fontWeight: 500, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(233,69,96,0.15)', borderRight: '3px solid #E94560' },
-    main: { padding: '32px', background: '#F4F4F6', minHeight: '100vh' },
-    tableWrap: { background: 'white', borderRadius: '12px', border: '1.5px solid #E0E0E6', overflow: 'hidden' },
-  }
+  const clubName = clubId && membres.length > 0 ? membres[0]?.club_nom : null
 
   return (
-    <div className="adhesions-layout">
-      <div className="adhesions-sidebar">
-        <div style={s.logo}>Event<span style={{ color: '#E94560' }}>Campus</span></div>
-        <div style={s.navItem} onClick={() => navigate('/organiser/dashboard')}>📊 Dashboard</div>
-        <div style={s.navItem} onClick={() => navigate('/organiser/clubs')}>🏛️ Mon club</div>        
-        <div className="adhesions-nav-item" onClick={() => navigate('/organiser/events')}>📅 Mes événements</div>
-        <div className="adhesions-nav-item active">👥 Membres</div>
-        <div className="messaging-nav-item" onClick={() => navigate('/organiser/messages')}>✉️ Messages</div>
-        <div style={{ position: 'absolute', bottom: '24px', left: 0, width: '220px', boxSizing: 'border-box', padding: '0 16px' }}>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
-            <button
-              onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login') }}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-                padding: '11px 14px', borderRadius: '10px', border: '1px solid rgba(233,69,96,0.35)',
-                background: 'rgba(233,69,96,0.1)', color: '#E94560',
-                fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                fontFamily: "'DM Sans', sans-serif", transition: 'all 0.2s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#E94560'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = '#E94560' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(233,69,96,0.1)'; e.currentTarget.style.color = '#E94560'; e.currentTarget.style.borderColor = 'rgba(233,69,96,0.35)' }}
-            >
-              <span style={{ fontSize: '16px' }}>🚪</span> Déconnexion
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="adhesions-main">
-        <div className="adhesions-top">
-          <h2>
-            Gestion des membres
-            {clubId && membres.length > 0 && (
-              <span style={{ fontSize: '14px', fontWeight: 500, color: '#7A7A8C', marginLeft: '10px', fontFamily: "'DM Sans', sans-serif" }}>
-                — {membres[0]?.club_nom}
-              </span>
-            )}
+    <DashboardLayout
+      active="members"
+      title="Gestion des membres"
+      subtitle={clubName ? `Club : ${clubName}` : 'Demandes d’adhésion et membres inscrits'}
+      actions={clubId ? (
+        <button type="button" className="ec-btn ec-btn--ghost" onClick={() => navigate('/organiser/adhesions')}>
+          <Icon><path d="M19 12H5m6-6-6 6 6 6" /></Icon>
+          Tous les clubs
+        </button>
+      ) : null}
+    >
+      <div className="ad">
+        <section aria-labelledby="ad-pending">
+          <h2 id="ad-pending" className="ad__title">
+            Demandes d'adhésion en attente
+            {!loading && <span className="ec-badge ec-badge--terra">{demandes.length}</span>}
           </h2>
-          {clubId && (
-            <button
-              onClick={() => navigate('/organiser/adhesions')}
-              style={{ marginTop: '6px', background: 'none', border: 'none', color: '#7A7A8C', fontSize: '12px', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              ← Tous les clubs
-            </button>
+
+          {loading && (
+            <div className="ad__skeletons" aria-busy="true">
+              <div className="ec-skeleton ad__sk" /><div className="ec-skeleton ad__sk" />
+            </div>
           )}
-        </div>
+          {error && <div className="ec-alert ec-alert--error" role="alert">{error}</div>}
 
-        <div className="adhesions-section-title">
-          Demandes d'adhésion en attente
-          {!loading && <span className="adhesions-badge">{demandes.length}</span>}
-        </div>
+          {!loading && !error && demandes.length === 0 && (
+            <div className="ec-card ec-card--sand ad__empty">Aucune demande en attente.</div>
+          )}
 
-        {loading && <p className="adhesions-muted">Chargement...</p>}
-        {error && <p className="adhesions-error">{error}</p>}
-
-        {!loading && !error && demandes.length === 0 && (
-          <p className="adhesions-muted">Aucune demande en attente.</p>
-        )}
-
-        {!loading && !error && demandes.map(d => (
-          <div key={d.id} className="adhesions-queue-item">
-            <div className="adhesions-info">
-              <h4>{d.user?.prenom} {d.user?.nom}</h4>
-              <p>{d.user?.email} · Demande envoyée le {formatDate(d.created_at)}</p>
+          {!loading && !error && demandes.map(d => (
+            <div key={d.id} className="ad__queue">
+              <span className="ad__avatar" aria-hidden="true">
+                {(d.user?.prenom || d.user?.name || '?').charAt(0).toUpperCase()}
+              </span>
+              <div className="ad__info">
+                <h3 className="ad__name">{d.user?.prenom} {d.user?.nom}</h3>
+                <p className="ad__meta">{d.user?.email} · Demande envoyée le {formatDate(d.created_at)}</p>
+              </div>
+              <div className="ad__actions">
+                <button
+                  type="button"
+                  className="ec-btn ec-btn--primary"
+                  disabled={processing === d.id}
+                  onClick={() => handleAccepter(d.id)}
+                >
+                  {processing === d.id ? '...' : <><Icon><path d="m5 12 5 5 9-10" /></Icon> Accepter</>}
+                </button>
+                <button
+                  type="button"
+                  className="ec-btn ec-btn--danger"
+                  disabled={processing === d.id}
+                  onClick={() => handleRefuser(d.id)}
+                >
+                  {processing === d.id ? '...' : <><Icon><path d="M6 6l12 12M18 6 6 18" /></Icon> Refuser</>}
+                </button>
+              </div>
             </div>
-            <div className="adhesions-actions">
-              <button
-                className="adhesions-btn adhesions-btn-success"
-                disabled={processing === d.id}
-                onClick={() => handleAccepter(d.id)}
-              >
-                {processing === d.id ? '...' : '✓ Accepter'}
-              </button>
-              <button
-                className="adhesions-btn adhesions-btn-danger"
-                disabled={processing === d.id}
-                onClick={() => handleRefuser(d.id)}
-              >
-                {processing === d.id ? '...' : '✕ Refuser'}
-              </button>
-            </div>
-          </div>
-        ))}
+          ))}
+        </section>
 
         {/* ── Membres inscrits ── */}
-        <div style={{ marginTop: '36px' }}>
-          <div className="adhesions-section-title">
+        <section aria-labelledby="ad-members" className="ad__members">
+          <h2 id="ad-members" className="ad__title">
             Membres inscrits
-            {!loading && (
-              <span style={{ background: 'rgba(46,204,113,0.12)', color: '#2ECC71', fontSize: '12px', fontWeight: 700, padding: '2px 9px', borderRadius: '20px' }}>
-                {membres.length}
-              </span>
-            )}
-          </div>
+            {!loading && <span className="ec-badge ec-badge--green">{membres.length}</span>}
+          </h2>
 
-          {loading && <p className="adhesions-muted">Chargement...</p>}
+          {loading && (
+            <div className="ad__skeletons" aria-busy="true">
+              <div className="ec-skeleton ad__sk" />
+            </div>
+          )}
 
           {!loading && membres.length === 0 && (
-            <p className="adhesions-muted">Aucun membre inscrit pour le moment.</p>
+            <div className="ec-card ec-card--sand ad__empty">Aucun membre inscrit pour le moment.</div>
           )}
 
           {!loading && membres.length > 0 && (
-            <div style={{ background: 'white', borderRadius: '12px', border: '1.5px solid #E0E0E6', overflow: 'hidden' }}>
-              {/* En-tête tableau */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1fr', padding: '10px 20px', background: '#F8F8FA', borderBottom: '1px solid #E0E0E6', fontSize: '11px', fontWeight: 700, color: '#7A7A8C', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                <div>Membre</div>
-                <div>Email</div>
-                <div>Club</div>
-                <div>Inscrit le</div>
-              </div>
-
-              {membres.map((m, i) => {
-                const name = m.prenom && m.nom
-                  ? `${m.prenom} ${m.nom}`
-                  : (m.name || '—')
-                const initial = name.charAt(0).toUpperCase()
-                return (
-                  <div
-                    key={`${m.user_id}-${m.club_id}`}
-                    style={{
-                      display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1fr',
-                      padding: '13px 20px', alignItems: 'center',
-                      borderBottom: i < membres.length - 1 ? '1px solid #F0F0F4' : 'none',
-                      fontSize: '13px', color: '#1A1A2E',
-                    }}
-                  >
-                    {/* Nom avec avatar initial */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{
-                        width: '32px', height: '32px', borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #E94560, #C0392B)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '13px', fontWeight: 700, color: 'white', flexShrink: 0,
-                      }}>
-                        {initial}
-                      </div>
-                      <span style={{ fontWeight: 600 }}>{name}</span>
-                    </div>
-
-                    {/* Email */}
-                    <div style={{ color: '#7A7A8C', fontSize: '12px' }}>{m.email || '—'}</div>
-
-                    {/* Club */}
-                    <div>
-                      <span style={{ fontSize: '11px', background: '#F0F0F8', color: '#4A4AE8', borderRadius: '6px', padding: '3px 8px', fontWeight: 600 }}>
-                        🏛️ {m.club_nom || '—'}
-                      </span>
-                    </div>
-
-                    {/* Date */}
-                    <div style={{ fontSize: '12px', color: '#7A7A8C' }}>{formatDate(m.joined_at)}</div>
-                  </div>
-                )
-              })}
+            <div className="ec-table-wrap">
+              <table className="ec-table ad__table">
+                <thead>
+                  <tr>
+                    <th scope="col">Membre</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Club</th>
+                    <th scope="col">Inscrit le</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {membres.map((m) => {
+                    const name = m.prenom && m.nom
+                      ? `${m.prenom} ${m.nom}`
+                      : (m.name || '—')
+                    const initial = name.charAt(0).toUpperCase()
+                    return (
+                      <tr key={`${m.user_id}-${m.club_id}`}>
+                        <td>
+                          <div className="ad__member">
+                            <span className="ad__avatar ad__avatar--sm" aria-hidden="true">{initial}</span>
+                            <span className="ad__member-name">{name}</span>
+                          </div>
+                        </td>
+                        <td className="ad__muted">{m.email || '—'}</td>
+                        <td><span className="ec-badge ec-badge--green">{m.club_nom || '—'}</span></td>
+                        <td className="ad__muted ad__nowrap">{formatDate(m.joined_at)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
-        </div>
+        </section>
       </div>
-    </div>
+    </DashboardLayout>
   )
 }

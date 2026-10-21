@@ -1,10 +1,24 @@
+import { getCurrentUserId } from '../../utils/currentUser'
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import DashboardLayout from '../../components/DashboardLayout'
 import { getConversations, createConversation, getMessages, sendMessage, sendBroadcastMessage, searchMembers } from '../../api/messages'
 import './Messaging.css'
 
+function Icon({ children, size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {children}
+    </svg>
+  )
+}
+
+const EMOJIS = ['😀','😂','😊','😍','🥰','😎','🤩','🥳','🙂','😉','🤔','😅','😢','😭','😡','👍','👎','👏','🙏','💪','🎉','🔥','⭐','❤️','💡','✅','❌','📅','📍','📎','📢','🎓','📚','🏆','⚽','🎭','💻','🌱','☕','👋']
+
+const isImage = (name = '') => /\.(jpe?g|png|gif|webp)$/i.test(name)
+
+const MegaphoneIcon = ({ size }) => <Icon size={size}><path d="M3 11v2a1 1 0 0 0 1 1h3l8 5V5L7 10H4a1 1 0 0 0-1 1z" /><path d="M19 9a4 4 0 0 1 0 6" /></Icon>
+
 export default function Messaging() {
-  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('individuel')
   const [conversations, setConversations] = useState([])
   const [searchResults, setSearchResults] = useState([])
@@ -16,7 +30,14 @@ export default function Messaging() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [searching, setSearching] = useState(false)
+  const [file, setFile] = useState(null)
+  const [emojiOpen, setEmojiOpen] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
+  const [fileError, setFileError] = useState('')
   const messagesEndRef = useRef(null)
+  const fileInputRef = useRef(null)
+  const inputRef = useRef(null)
+  const emojiRef = useRef(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -29,6 +50,24 @@ export default function Messaging() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  useEffect(() => {
+    if (!emojiOpen) return
+    const onDown = (e) => { if (emojiRef.current && !emojiRef.current.contains(e.target)) setEmojiOpen(false) }
+    const onKey = (e) => { if (e.key === 'Escape') setEmojiOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [emojiOpen])
+
+  useEffect(() => {
+    setInfoOpen(false)
+    setFile(null)
+    setFileError('')
+  }, [selectedConv?.id])
 
   useEffect(() => {
     if (selectedConv) {
@@ -71,7 +110,7 @@ export default function Messaging() {
       // Conversation name
       name:
         conv.name ||
-        conv.participants?.find(p => p.id !== Number(localStorage.getItem('user_id')))?.name ||
+        conv.participants?.find(p => p.id !== getCurrentUserId())?.name ||
         'Utilisateur',
 
       // Last message text
@@ -156,7 +195,7 @@ export default function Messaging() {
       : (res.data.data || res.data.messages || [])
 
     // Current connected user id
-    const currentUserId = Number(localStorage.getItem('user_id')) || JSON.parse(localStorage.getItem('user') || '{}')?.id
+    const currentUserId = getCurrentUserId()
 
     // Format messages for frontend
     const formattedMessages = rawMessages.map(msg => {
@@ -164,6 +203,8 @@ export default function Messaging() {
       return {
         id: msg.id,
         content: msg.content,
+        attachmentUrl: msg.attachment_url || null,
+        attachmentName: msg.attachment_name || null,
         sentAt: msg.created_at,
         isOwn: Number(senderId) === Number(currentUserId),
         senderName: msg.sender?.name || 'Utilisateur'
@@ -177,16 +218,20 @@ export default function Messaging() {
 }
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !selectedConv) return
+    if ((!inputValue.trim() && !file) || !selectedConv) return
 
     setSending(true)
     try {
       if (isBroadcastMode) {
         await sendBroadcastMessage(inputValue.trim())
       } else {
-        await sendMessage(selectedConv.id, inputValue.trim(), false)
+        await sendMessage(selectedConv.id, inputValue.trim(), false, file)
       }
       setInputValue('')
+      setFile(null)
+      setFileError('')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      if (inputRef.current) inputRef.current.style.height = 'auto'
       await fetchMessages(selectedConv.id)
     } catch (err) {
       console.error('Erreur lors de l\'envoi du message', err)
@@ -194,6 +239,34 @@ export default function Messaging() {
     } finally {
       setSending(false)
     }
+  }
+
+  const handlePickFile = (e) => {
+    const picked = e.target.files?.[0]
+    if (!picked) return
+    if (picked.size > 5 * 1024 * 1024) {
+      setFile(null)
+      setFileError('Le fichier dépasse 5 Mo.')
+      e.target.value = ''
+      return
+    }
+    setFileError('')
+    setFile(picked)
+  }
+
+  const insertEmoji = (emoji) => {
+    const el = inputRef.current
+    const start = el?.selectionStart ?? inputValue.length
+    const end = el?.selectionEnd ?? inputValue.length
+    const next = inputValue.slice(0, start) + emoji + inputValue.slice(end)
+    setInputValue(next)
+    setEmojiOpen(false)
+    requestAnimationFrame(() => {
+      if (!el) return
+      el.focus()
+      const pos = start + emoji.length
+      el.setSelectionRange(pos, pos)
+    })
   }
 
   const handleKeyDown = (e) => {
@@ -214,7 +287,7 @@ export default function Messaging() {
   }
 
   const getAvatarColor = (id) => {
-    const colors = ['#E94560', '#0F3460', '#2ECC71', '#F39C12', '#9B59B6', '#E74C3C']
+    const colors = ['#0f5132', '#a85a28', '#0b3d26', '#8f4a1f', '#3b6b52', '#6b4a2b']
     return colors[id % colors.length]
   }
 
@@ -236,106 +309,82 @@ export default function Messaging() {
   const displayList = searchQuery.trim() ? searchResults : conversations
 
   return (
-    <div className="messaging-layout">
-      {/* Sidebar Navigation */}
-      <div className="messaging-sidebar">
-        <div className="messaging-logo">Event<span>Campus</span></div>
-        <div className="messaging-nav-item" onClick={() => navigate('/organiser/events')}>
-          📊 Dashboard
-        </div>
-        <div className="messaging-nav-item" onClick={() => navigate('/organiser/clubs')}>
-          🏛️ Mon club
-        </div>
-        <div className="messaging-nav-item" onClick={() => navigate('/organiser/events')}>
-          📅 Mes événements
-        </div>
-        <div className="messaging-nav-item" onClick={() => navigate('/organiser/adhesions')}>
-          👥 Membres
-        </div>
-        <div className="messaging-nav-item active">✉️ Messages</div>
-        <div style={{ position: 'absolute', bottom: '24px', left: 0, width: '220px', boxSizing: 'border-box', padding: '0 16px' }}>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
-            <button
-              onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login') }}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-                padding: '11px 14px', borderRadius: '10px', border: '1px solid rgba(233,69,96,0.35)',
-                background: 'rgba(233,69,96,0.1)', color: '#E94560',
-                fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                fontFamily: "'DM Sans', sans-serif", transition: 'all 0.2s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#E94560'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = '#E94560' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(233,69,96,0.1)'; e.currentTarget.style.color = '#E94560'; e.currentTarget.style.borderColor = 'rgba(233,69,96,0.35)' }}
-            >
-              <span style={{ fontSize: '16px' }}>🚪</span> Déconnexion
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Messaging Area */}
-      <div className="messaging-main">
+    <DashboardLayout
+      active="messages"
+      title="Messages"
+      subtitle="Échangez avec les membres de votre club"
+    >
+      <div className="ms">
         {/* Conversation List */}
-        <div className="messaging-conv-list">
-          <div className="messaging-conv-header">
-            <h3>Messagerie</h3>
-            <div className="messaging-search-box">
-              <span>🔍</span>
+        <div className="ms__list">
+          <div className="ms__list-head">
+            <div className="ms__search">
+              <Icon size={16}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></Icon>
               <input
+                type="search"
                 placeholder="Rechercher un membre…"
+                aria-label="Rechercher un membre"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
 
-          <div className="messaging-conv-tabs">
-            <div
-              className={`messaging-conv-tab ${activeTab === 'individuel' ? 'active' : ''}`}
+          <div className="ms__tabs" role="tablist" aria-label="Type de conversation">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'individuel'}
+              className={`ms__tab${activeTab === 'individuel' ? ' is-active' : ''}`}
               onClick={() => setActiveTab('individuel')}
             >
               Individuel
-            </div>
-            <div
-              className={`messaging-conv-tab ${activeTab === 'broadcast' ? 'active' : ''}`}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'broadcast'}
+              className={`ms__tab${activeTab === 'broadcast' ? ' is-active' : ''}`}
               onClick={() => setActiveTab('broadcast')}
             >
               Broadcast
-            </div>
+            </button>
           </div>
 
-          <div className="messaging-conv-items">
+          <div className="ms__items">
             {loading || searching ? (
-              <p className="messaging-muted">Chargement...</p>
+              <p className="ms__muted">Chargement...</p>
             ) : displayList.length === 0 ? (
-              <p className="messaging-muted">{searchQuery.trim() ? 'Aucun membre trouvé.' : 'Aucune conversation.'}</p>
+              <p className="ms__muted">{searchQuery.trim() ? 'Aucun membre trouvé.' : 'Aucune conversation.'}</p>
             ) : (
               displayList.map(item => {
                 const isSearchResult = searchQuery.trim() && searchResults.includes(item)
                 const conv = item
+                const isActive = selectedConv?.id === conv.id || selectedConv?.member_id === conv.id
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={conv.id || conv.member_id}
-                    className={`messaging-conv-item ${selectedConv?.id === conv.id || selectedConv?.member_id === conv.id ? 'active' : ''} ${
-                      conv.unread ? 'unread' : ''
-                    } ${activeTab === 'broadcast' ? 'broadcast' : ''}`}
+                    className={`ms__conv${isActive ? ' is-active' : ''}${conv.unread ? ' is-unread' : ''}${activeTab === 'broadcast' ? ' is-broadcast' : ''}`}
+                    aria-current={isActive ? 'true' : undefined}
                     onClick={() => isSearchResult ? handleStartConversation(conv) : setSelectedConv(conv)}
                   >
-                    <div
-                      className="messaging-conv-avatar"
-                      style={{ background: activeTab === 'broadcast' ? '#F39C12' : getAvatarColor(conv.id || conv.member_id) }}
+                    <span
+                      className="ms__avatar"
+                      style={{ background: activeTab === 'broadcast' ? 'var(--ec-terra)' : getAvatarColor(conv.id || conv.member_id) }}
+                      aria-hidden="true"
                     >
-                      {activeTab === 'broadcast' ? '📢' : getInitials(conv.name)}
-                    </div>
-                    <div className="messaging-conv-info">
-                      <div className="messaging-conv-name">{conv.name}</div>
-                      <div className="messaging-conv-preview">{isSearchResult ? 'Nouveau membre' : (conv.lastMessage?.substring(0, 50) || 'Aucun message')}</div>
-                    </div>
-                    <div className="messaging-conv-meta">
-                      <div className="messaging-conv-time">{!isSearchResult && formatTime(conv.lastMessageAt)}</div>
-                      {conv.unread && <div className="messaging-unread-dot"></div>}
-                    </div>
-                  </div>
+                      {activeTab === 'broadcast' ? <MegaphoneIcon size={18} /> : getInitials(conv.name)}
+                    </span>
+                    <span className="ms__conv-info">
+                      <span className="ms__conv-name">{conv.name}</span>
+                      <span className="ms__conv-preview">{isSearchResult ? 'Nouveau membre' : (conv.lastMessage?.substring(0, 50) || 'Aucun message')}</span>
+                    </span>
+                    <span className="ms__conv-meta">
+                      <span className="ms__conv-time">{!isSearchResult && formatTime(conv.lastMessageAt)}</span>
+                      {conv.unread && <span className="ms__unread" aria-label="Non lu"></span>}
+                    </span>
+                  </button>
                 )
               })
             )}
@@ -344,110 +393,197 @@ export default function Messaging() {
 
         {/* Chat Zone */}
         {selectedConv ? (
-          <div className="messaging-chat-zone">
+          <div className="ms__chat">
             {/* Header */}
-            <div className="messaging-chat-header">
-              <div
-                className="messaging-chat-avatar"
-                style={{ background: activeTab === 'broadcast' ? '#F39C12' : getAvatarColor(selectedConv.id) }}
+            <div className="ms__chat-head">
+              <span
+                className="ms__avatar ms__avatar--lg"
+                style={{ background: activeTab === 'broadcast' ? 'var(--ec-terra)' : getAvatarColor(selectedConv.id) }}
+                aria-hidden="true"
               >
-                {activeTab === 'broadcast' ? '📢' : getInitials(selectedConv.name)}
-              </div>
-              <div>
-                <div className="messaging-chat-name">{selectedConv.name}</div>
-                <div className="messaging-chat-sub">
-                  {activeTab === 'broadcast' ? 'Tous les membres' : `Membre depuis ${selectedConv.memberSince || 'N/A'}`}
+                {activeTab === 'broadcast' ? <MegaphoneIcon size={20} /> : getInitials(selectedConv.name)}
+              </span>
+              <div className="ms__chat-title">
+                <div className="ms__chat-name">{selectedConv.name}</div>
+                <div className="ms__chat-sub">
+                  {activeTab === 'broadcast' ? 'Tous les membres' : (selectedConv.memberSince ? `Membre depuis ${selectedConv.memberSince}` : 'Conversation individuelle')}
                 </div>
               </div>
-              <div className="messaging-chat-actions">
-                <button className="messaging-btn-icon" title="Voir le profil">
-                  👤
-                </button>
-                <button className="messaging-btn-icon" title="Informations">
-                  ℹ️
+              <div className="ms__chat-actions">
+                <button
+                  type="button"
+                  className={`ms__icon-btn${infoOpen ? ' is-active' : ''}`}
+                  title="Informations"
+                  aria-label="Informations sur la conversation"
+                  aria-expanded={infoOpen}
+                  onClick={() => setInfoOpen((o) => !o)}
+                >
+                  <Icon><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></Icon>
                 </button>
               </div>
             </div>
 
+            {infoOpen && (
+              <div className="ms__info" role="region" aria-label="Informations sur la conversation">
+                <div className="ms__info-row"><span>Nom</span><strong>{selectedConv.name}</strong></div>
+                <div className="ms__info-row"><span>Type</span><strong>{activeTab === 'broadcast' ? 'Diffusion (tous les membres)' : 'Conversation individuelle'}</strong></div>
+                <div className="ms__info-row"><span>Messages</span><strong>{messages.length}</strong></div>
+                {messages.length > 0 && (
+                  <div className="ms__info-row"><span>Dernier message</span><strong>{new Date(messages[messages.length - 1].sentAt).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}</strong></div>
+                )}
+              </div>
+            )}
+
             {/* Messages */}
-          <div className="messaging-messages">
-  {messages.length === 0 ? (
-    <div className="messaging-empty-chat">
-      <div className="messaging-empty-icon">💬</div>
-      <p>Aucun message yet</p>
-    </div>
-  ) : (
-    messages.map((msg) => (
-      <div
-        key={msg.id}
-        className={`messaging-msg ${msg.isOwn ? 'me' : ''}`}
-      >
-        <div
-          className="messaging-msg-av"
-          style={{
-            background: msg.isOwn
-              ? '#1A1A2E'
-              : getAvatarColor(selectedConv.id)
-          }}
-        >
-          {msg.isOwn ? 'M' : getInitials(msg.senderName)}
-        </div>
+            <div className="ms__messages" role="log" aria-live="polite" aria-label="Messages">
+              {messages.length === 0 ? (
+                <div className="ms__empty-chat">
+                  <span className="ms__empty-icon">
+                    <Icon size={26}><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" /></Icon>
+                  </span>
+                  <p>Aucun message pour le moment</p>
+                </div>
+              ) : (
+                messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`ms__msg${msg.isOwn ? ' is-me' : ''}`}
+                  >
+                    <span
+                      className="ms__avatar ms__avatar--sm"
+                      style={{
+                        background: msg.isOwn
+                          ? 'var(--ec-green-dark)'
+                          : getAvatarColor(selectedConv.id)
+                      }}
+                      aria-hidden="true"
+                    >
+                      {msg.isOwn ? 'M' : getInitials(msg.senderName)}
+                    </span>
 
-        <div className="messaging-msg-content">
-          {!msg.isOwn && (
-            <div className="messaging-msg-sender">
-              {msg.senderName}
+                    <div className="ms__msg-content">
+                      {!msg.isOwn && (
+                        <div className="ms__msg-sender">{msg.senderName}</div>
+                      )}
+
+                      <div className="ms__bubble">
+                        {msg.content}
+                        {msg.attachmentUrl && (
+                          isImage(msg.attachmentName) ? (
+                            <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer" className="ms__attach-img">
+                              <img src={msg.attachmentUrl} alt={msg.attachmentName || 'Image jointe'} />
+                            </a>
+                          ) : (
+                            <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer" download className="ms__attach">
+                              <Icon size={16}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></Icon>
+                              <span>{msg.attachmentName || 'Fichier joint'}</span>
+                            </a>
+                          )
+                        )}
+                      </div>
+
+                      <div className="ms__msg-time">{formatTime(msg.sentAt)}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              <div ref={messagesEndRef}></div>
             </div>
-          )}
-
-          <div className="messaging-msg-bubble">
-            {msg.content}
-          </div>
-
-          <div className="messaging-msg-time">
-            {formatTime(msg.sentAt)}
-          </div>
-        </div>
-      </div>
-    ))
-  )}
-
-  <div ref={messagesEndRef}></div>
-</div>
 
             {/* Input Zone */}
-            <div className="messaging-input-zone">
+            <div className="ms__input-zone">
               {isBroadcastMode && (
-                <div className="messaging-broadcast-panel">
-                  <div className="messaging-bp-header">
-                    <span className="messaging-bp-title">📢 Envoyer à tous les membres</span>
+                <div className="ms__broadcast">
+                  <div className="ms__bp-head">
+                    <span className="ms__bp-title"><MegaphoneIcon size={16} /> Envoyer à tous les membres</span>
                     <button
-                      className="messaging-bp-close"
+                      type="button"
+                      className="ms__bp-close"
                       onClick={() => setIsBroadcastMode(false)}
+                      aria-label="Fermer le mode broadcast"
                     >
-                      ✕
+                      <Icon size={16}><path d="M6 6l12 12M18 6 6 18" /></Icon>
                     </button>
                   </div>
-                  <select className="messaging-bp-select">
+                  <select className="ec-select" aria-label="Destinataires">
                     <option>Tous les membres du club (142)</option>
                     <option>Sélectionner des membres spécifiques…</option>
                   </select>
                 </div>
               )}
-              <div className="messaging-input-tools">
+              <div className="ms__tools">
                 <button
-                  className="messaging-tool-btn"
+                  type="button"
+                  className={`ms__tool${isBroadcastMode ? ' is-active' : ''}`}
+                  aria-pressed={isBroadcastMode}
                   onClick={() => setIsBroadcastMode(!isBroadcastMode)}
                 >
-                  📢 Broadcast
+                  <MegaphoneIcon size={16} /> Broadcast
                 </button>
-                <button className="messaging-tool-btn">📎 Fichier</button>
-                <button className="messaging-tool-btn">😊 Emoji</button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="ec-sr-only"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip"
+                  onChange={handlePickFile}
+                />
+                <button
+                  type="button"
+                  className="ms__tool"
+                  disabled={isBroadcastMode}
+                  title={isBroadcastMode ? 'Pièces jointes indisponibles en mode broadcast' : 'Joindre un fichier (5 Mo max)'}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Icon size={16}><path d="m21 12-8.5 8.5a5 5 0 0 1-7-7L14 5a3.5 3.5 0 0 1 5 5l-8.6 8.6a2 2 0 0 1-2.8-2.8L15 8.5" /></Icon> Fichier
+                </button>
+                <div className="ms__emoji-wrap" ref={emojiRef}>
+                  <button
+                    type="button"
+                    className={`ms__tool${emojiOpen ? ' is-active' : ''}`}
+                    aria-haspopup="true"
+                    aria-expanded={emojiOpen}
+                    onClick={() => setEmojiOpen((o) => !o)}
+                  >
+                    <Icon size={16}><circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></Icon> Emoji
+                  </button>
+                  {emojiOpen && (
+                    <div className="ms__emoji-pop" role="dialog" aria-label="Choisir un emoji">
+                      {EMOJIS.map((em) => (
+                        <button key={em} type="button" className="ms__emoji" onClick={() => insertEmoji(em)} aria-label={`Insérer ${em}`}>
+                          {em}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="messaging-input-row">
+              {(file || fileError) && (
+                <div className={`ms__file${fileError ? ' is-error' : ''}`} role={fileError ? 'alert' : undefined}>
+                  {fileError ? fileError : (
+                    <>
+                      <Icon size={16}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></Icon>
+                      <span className="ms__file-name">{file.name}</span>
+                      <button
+                        type="button"
+                        className="ms__file-x"
+                        aria-label="Retirer le fichier"
+                        onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                      >
+                        <Icon size={14}><path d="M6 6l12 12M18 6 6 18" /></Icon>
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+              <div className="ms__input-row">
                 <textarea
-                  className="messaging-input-box"
+                  ref={inputRef}
+                  className="ec-textarea ms__input"
                   placeholder="Écrire un message…"
+                  aria-label="Écrire un message"
                   value={inputValue}
                   onChange={(e) => {
                     setInputValue(e.target.value)
@@ -459,21 +595,22 @@ export default function Messaging() {
                   disabled={sending}
                 />
                 <button
-                  className="messaging-btn-send"
+                  type="button"
+                  className="ec-btn ec-btn--primary ms__send"
                   onClick={handleSendMessage}
-                  disabled={sending || !inputValue.trim()}
+                  disabled={sending || (!inputValue.trim() && !file)}
                 >
-                  {sending ? '⏱️' : 'Envoyer ↑'}
+                  {sending ? 'Envoi…' : <>Envoyer <Icon size={16}><path d="M12 19V5m-6 6 6-6 6 6" /></Icon></>}
                 </button>
               </div>
             </div>
           </div>
         ) : (
-          <div className="messaging-empty-state">
+          <div className="ms__empty-state">
             <p>Sélectionnez une conversation pour démarrer.</p>
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   )
 }

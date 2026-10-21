@@ -4,6 +4,9 @@ import { logout } from '../../api/auth'
 import { getUsers, getPendingUsers, activateUser, deactivateUser, rejectUser, activateRole, getPendingClubs, getValidatedClubs, getSuspendedClubs, approveClub, rejectClub, suspendClub, reactivateClub, deleteClub, getPendingEvents, getAllEvents, validateEvent, rejectEvent } from '../../api/admin'
 import StatisticsSection from './StatisticsSection'
 import RoleRequestsSection from './RoleRequestsSection'
+import DashboardLayout, { ADMIN_ITEMS } from '../../components/DashboardLayout'
+import AdminIcon from './AdminIcon'
+import './AdminDashboard.css'
 
 
 function AdminDashboard() {
@@ -30,7 +33,12 @@ function AdminDashboard() {
   const [allEvents, setAllEvents] = useState([])
   const [eventsTab, setEventsTab] = useState('pending')
   const [eventMsg, setEventMsg] = useState(null)
-  const [loading, setLoading] = useState(false)
+  // Several lists can load at once (users / clubs / events): count in-flight requests so a slow
+  // request that finishes late can't flip `loading` to false while another list is still loading
+  // (that briefly showed "Aucun club en attente" although clubs were pending).
+  const [inflight, setInflight] = useState(0)
+  const loading = inflight > 0
+  const setLoading = (on) => setInflight((n) => Math.max(0, n + (on ? 1 : -1)))
   const [searchQuery, setSearchQuery] = useState('')
   const [filterRole, setFilterRole] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
@@ -123,6 +131,7 @@ const handleRejectUser = async (userId) => {
       await approveClub(clubId)
       setClubMsg({ type: 'success', text: 'Club approuvé avec succès.' })
       fetchPendingClubs()
+      fetchValidatedClubs()
     } catch {
       setClubMsg({ type: 'error', text: "Erreur lors de l'approbation." })
     }
@@ -273,83 +282,29 @@ const handleRejectUser = async (userId) => {
     }
   }
 
-  const s = {
-    layout: { display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" },
-    sidebar: { background: '#1A1A2E', padding: '24px 0' },
-    logo: { fontFamily: "'Fraunces', serif", fontSize: '18px', color: 'white', padding: '0 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '16px' },
-    navItem: { padding: '11px 20px', fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.55)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' },
-    navActive: { padding: '11px 20px', fontSize: '13px', fontWeight: 500, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(233,69,96,0.15)', borderRight: '3px solid #E94560' },
-    main: { padding: '32px', background: '#F4F4F6', minHeight: '100vh' },
+  const SECTION_META = {
+    statistics: { title: 'Statistiques', subtitle: "Vue d'ensemble de la plateforme" },
+    users: { title: 'Utilisateurs', subtitle: 'Gérez les comptes et les rôles des utilisateurs' },
+    clubs: { title: 'Validation des clubs', subtitle: 'Approuvez, suspendez ou supprimez les clubs' },
+    events: { title: 'Validation des événements', subtitle: 'Validez ou refusez les événements proposés' },
+    'role-requests': { title: 'Demandes de rôle organisateur', subtitle: 'Examinez les demandes en attente' },
+    activity: { title: 'Activité récente', subtitle: 'Derniers mouvements sur la plateforme' },
   }
+  const meta = SECTION_META[activeSection] || SECTION_META.statistics
+
+  const pendingEventList = pendingEvents.length > 0 ? pendingEvents : allEvents.filter(isPendingStatus)
 
   return (
-    <div style={s.layout}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@700;900&display=swap" rel="stylesheet" />
-
-      {/* Sidebar */}
-      <div style={s.sidebar}>
-        <div style={s.logo}>Event<span style={{ color: '#E94560' }}>Campus</span></div>
-        <div
-          style={activeSection === 'statistics' ? s.navActive : s.navItem}
-          onClick={() => setActiveSection('statistics')}
-        >
-          📊 Statistiques
-        </div>
-        <div
-          style={activeSection === 'users' ? s.navActive : s.navItem}
-          onClick={() => setActiveSection('users')}
-        >
-          👥 Utilisateurs
-        </div>
-<div
-          style={activeSection === 'clubs' ? s.navActive : s.navItem}
-          onClick={() => setActiveSection('clubs')}
-        >
-          🏛️ Clubs
-        </div>
-        <div
-          style={activeSection === 'events' ? s.navActive : s.navItem}
-          onClick={() => setActiveSection('events')}
-        >
-          📅 Événements
-        </div>
-        <div
-          style={activeSection === 'role-requests' ? s.navActive : s.navItem}
-          onClick={() => setActiveSection('role-requests')}
-        >
-          🔑 Demandes de rôle
-        </div>
-        <div
-          style={activeSection === 'activity' ? s.navActive : s.navItem}
-          onClick={() => setActiveSection('activity')}
-        >
-          📋 Activité
-        </div>
-      </div>
-
-      {/* Main */}
-      <div style={s.main}>
-        <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', color: '#1A1A2E' }}>
-              {activeSection === 'statistics' && '📊 Statistiques'}
-              {activeSection === 'users' && '👥 Utilisateurs'}
-              {activeSection === 'clubs' && '🏛️ Validation des clubs'}
-              {activeSection === 'events' && '📅 Validation des événements'}
-              {activeSection === 'role-requests' && '🔑 Demandes de rôle organisateur'}
-              {activeSection === 'activity' && '📋 Activité récente'}
-            </h2>
-          </div>
-          <button
-            onClick={handleLogout}
-            style={{ background: '#E94560', color: 'white', border: 'none', borderRadius: '10px', padding: '12px 24px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-            onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-            onMouseLeave={(e) => e.target.style.opacity = '1'}
-          >
-            Déconnexion
-          </button>
-        </div>
-
+    <DashboardLayout
+      items={ADMIN_ITEMS}
+      active={activeSection}
+      onSelect={setActiveSection}
+      roleLabel="Espace administrateur"
+      title={meta.title}
+      subtitle={meta.subtitle}
+      onLogout={handleLogout}
+    >
+      <div className="adm">
         {/* Statistics Section */}
         {activeSection === 'statistics' && <StatisticsSection />}
 
@@ -360,27 +315,25 @@ const handleRejectUser = async (userId) => {
         {activeSection === 'users' && (
           <div>
             {/* Filters and Search */}
-            <div style={{ marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#7A7A8C', marginBottom: '6px', textTransform: 'uppercase' }}>Rechercher</label>
+            <div className="adm__toolbar">
+              <div className="ec-field adm__search">
+                <label className="ec-label" htmlFor="adm-search">Rechercher</label>
                 <input
+                  id="adm-search"
                   type="text"
+                  className="ec-input"
                   placeholder="Nom ou email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ width: '100%', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
-                  onFocus={(e) => e.target.style.borderColor = '#E94560'}
-                  onBlur={(e) => e.target.style.borderColor = '#E0E0E6'}
                 />
               </div>
-              <div style={{ minWidth: '150px' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#7A7A8C', marginBottom: '6px', textTransform: 'uppercase' }}>Rôle</label>
+              <div className="ec-field adm__filter">
+                <label className="ec-label" htmlFor="adm-role">Rôle</label>
                 <select
+                  id="adm-role"
+                  className="ec-select"
                   value={filterRole}
                   onChange={(e) => setFilterRole(e.target.value)}
-                  style={{ width: '100%', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none', cursor: 'pointer' }}
-                  onFocus={(e) => e.target.style.borderColor = '#E94560'}
-                  onBlur={(e) => e.target.style.borderColor = '#E0E0E6'}
                 >
                   <option value="">Tous les rôles</option>
                   <option value="etudiant">Étudiant</option>
@@ -388,14 +341,13 @@ const handleRejectUser = async (userId) => {
                   <option value="admin">Admin</option>
                 </select>
               </div>
-              <div style={{ minWidth: '150px' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#7A7A8C', marginBottom: '6px', textTransform: 'uppercase' }}>Statut</label>
+              <div className="ec-field adm__filter">
+                <label className="ec-label" htmlFor="adm-status">Statut</label>
                 <select
+                  id="adm-status"
+                  className="ec-select"
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  style={{ width: '100%', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none', cursor: 'pointer' }}
-                  onFocus={(e) => e.target.style.borderColor = '#E94560'}
-                  onBlur={(e) => e.target.style.borderColor = '#E0E0E6'}
                 >
                   <option value="">Tous les statuts</option>
                   <option value="actif">Actif</option>
@@ -406,87 +358,75 @@ const handleRejectUser = async (userId) => {
 
             {/* Users Table */}
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
+              <div className="ec-state" role="status">Chargement...</div>
             ) : users.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun utilisateur trouvé</div>
+              <div className="ec-state">Aucun utilisateur trouvé</div>
             ) : (
-              <div style={{ background: 'white', borderRadius: '12px', border: '1.5px solid #E0E0E6', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <div className="ec-table-wrap">
+                <table className="ec-table adm__table">
                   <thead>
                     <tr>
                       {['Utilisateur', 'Email', 'Rôle', 'Statut', 'Actions'].map(h => (
-                        <th key={h} style={{ background: '#F4F4F6', padding: '10px 16px', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#7A7A8C', fontWeight: 600 }}>{h}</th>
+                        <th key={h} scope="col">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {users.filter(usr => usr.id !== user.id).map((usr, i, arr) => {
-                      const isLast = i === arr.length - 1
-                      const tdStyle = { padding: '13px 16px', borderBottom: isLast ? 'none' : '1px solid #E0E0E6', color: '#1A1A2E', verticalAlign: 'middle' }
+                    {users.filter(usr => usr.id !== user.id).map((usr) => {
                       const isBanned = usr.role === 'banni'
-                      const roleColor = usr.role === 'etudiant' ? { bg: '#EEF0FF', color: '#4A4AE8' } : usr.role === 'organisateur' ? { bg: '#FFF4E6', color: '#FF9500' } : usr.role === 'banni' ? { bg: '#FFE6E6', color: '#E94560' } : { bg: '#E6FFE6', color: '#4CAF50' }
-                      const statusColor = isBanned ? { bg: '#FFE6E6', color: '#E94560' } : { bg: '#E6FFE6', color: '#4CAF50' }
+                      const role = ROLE_BADGES[usr.role] || ROLE_BADGES.admin
                       return (
                         <tr key={usr.id}>
-                          <td style={tdStyle}>
-                            <div style={{ fontWeight: 600 }}>{usr.name}</div>
-                          </td>
-                          <td style={tdStyle}>{usr.email}</td>
-                          <td style={tdStyle}>
-                            <span style={{ background: roleColor.bg, color: roleColor.color, padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
-                              {usr.role === 'etudiant' ? '🎓 Étudiant' : usr.role === 'organisateur' ? '🏛️ Organisateur' : usr.role === 'banni' ? '🚫 Banni' : '⚙️ Admin'}
+                          <td className="adm__cell-title">{usr.name}</td>
+                          <td>{usr.email}</td>
+                          <td>
+                            <span className={`ec-badge ${role.cls}`}>
+                              <AdminIcon name={role.icon} size={12} />
+                              {role.label}
                             </span>
                           </td>
-                          <td style={tdStyle}>
-                            <span style={{ background: statusColor.bg, color: statusColor.color, padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'inline-block' }}>
-                              {isBanned ? '❌ Inactif' : '✅ Actif'}
-                            </span>
+                          <td>
+                            {isBanned ? (
+                              <span className="ec-badge ec-badge--red"><AdminIcon name="x" size={12} />Inactif</span>
+                            ) : (
+                              <span className="ec-badge ec-badge--green"><AdminIcon name="check" size={12} />Actif</span>
+                            )}
                           </td>
-                          <td style={tdStyle}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <div>
-                                {usr.role !== 'admin' && (isBanned ? (
-                                  <button
-                                    onClick={() => handleActivateUser(usr.id)}
-                                    style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                                    onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                                    onMouseLeave={(e) => e.target.style.opacity = '1'}
-                                  >
-                                    ✓ Activer
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => handleDeactivateUser(usr.id)}
-                                    style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                                    onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                                    onMouseLeave={(e) => e.target.style.opacity = '1'}
-                                  >
-                                    ✕ Désactiver
-                                  </button>
-                                ))}
-                              </div>
-                              <div style={{ display: 'flex', gap: '6px' }}>
-                                {usr.role !== 'etudiant' && (
-                                  <button
-                                    onClick={() => handleActivateRole(usr.id, 'etudiant')}
-                                    style={{ background: '#4A4AE8', color: 'white', border: 'none', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                                    onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                                    onMouseLeave={(e) => e.target.style.opacity = '1'}
-                                  >
-                                    🎓 Étudiant
-                                  </button>
-                                )}
-                                {usr.role !== 'organisateur' && (
-                                  <button
-                                    onClick={() => handleActivateRole(usr.id, 'organisateur')}
-                                    style={{ background: '#FF9500', color: 'white', border: 'none', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                                    onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                                    onMouseLeave={(e) => e.target.style.opacity = '1'}
-                                  >
-                                    🏛️ Organisateur
-                                  </button>
-                                )}
-                              </div>
+                          <td>
+                            <div className="adm__actions">
+                              {usr.role !== 'admin' && (isBanned ? (
+                                <button type="button" className="ec-btn ec-btn--primary ec-btn--sm" onClick={() => handleActivateUser(usr.id)}>
+                                  <AdminIcon name="check" />
+                                  Activer
+                                </button>
+                              ) : (
+                                <button type="button" className="ec-btn ec-btn--danger ec-btn--sm" onClick={() => handleDeactivateUser(usr.id)}>
+                                  <AdminIcon name="x" />
+                                  Désactiver
+                                </button>
+                              ))}
+                              {usr.role !== 'etudiant' && (
+                                <button
+                                  type="button"
+                                  className="ec-btn ec-btn--ghost ec-btn--sm"
+                                  aria-label={`Passer ${usr.name} au rôle Étudiant`}
+                                  onClick={() => handleActivateRole(usr.id, 'etudiant')}
+                                >
+                                  <AdminIcon name="student" />
+                                  Étudiant
+                                </button>
+                              )}
+                              {usr.role !== 'organisateur' && (
+                                <button
+                                  type="button"
+                                  className="ec-btn ec-btn--ghost ec-btn--sm"
+                                  aria-label={`Passer ${usr.name} au rôle Organisateur`}
+                                  onClick={() => handleActivateRole(usr.id, 'organisateur')}
+                                >
+                                  <AdminIcon name="club" />
+                                  Organisateur
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -499,187 +439,57 @@ const handleRejectUser = async (userId) => {
           </div>
         )}
 
-
-
         {/* Clubs Validation Section */}
         {activeSection === 'clubs' && (
           <div>
-            {clubMsg && (
-              <div style={{
-                marginBottom: '16px',
-                padding: '10px 16px',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: 500,
-                background: clubMsg.type === 'success' ? 'rgba(46,204,113,0.12)' : clubMsg.type === 'warning' ? 'rgba(255,149,0,0.12)' : 'rgba(233,69,96,0.10)',
-                color: clubMsg.type === 'success' ? '#1a7a47' : clubMsg.type === 'warning' ? '#b36a00' : '#E94560',
-              }}>
-                {clubMsg.text}
-              </div>
-            )}
+            <Notice msg={clubMsg} />
 
-            {/* Tabs */}
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '4px', width: 'fit-content' }}>
-              <button
-                onClick={() => setClubsTab('pending')}
-                style={{ background: clubsTab === 'pending' ? '#1A1A2E' : 'transparent', color: clubsTab === 'pending' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-              >
-                ⏳ En attente {pendingClubs.length > 0 && `(${pendingClubs.length})`}
-              </button>
-              <button
-                onClick={() => setClubsTab('validated')}
-                style={{ background: clubsTab === 'validated' ? '#1A1A2E' : 'transparent', color: clubsTab === 'validated' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-              >
-                ✅ Validés {validatedClubs.length > 0 && `(${validatedClubs.length})`}
-              </button>
-              <button
-                onClick={() => setClubsTab('suspended')}
-                style={{ background: clubsTab === 'suspended' ? '#1A1A2E' : 'transparent', color: clubsTab === 'suspended' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-              >
-                ⏸ Suspendus {suspendedClubs.length > 0 && `(${suspendedClubs.length})`}
-              </button>
-            </div>
+            <Tabs
+              label="Filtrer les clubs"
+              value={clubsTab}
+              onChange={setClubsTab}
+              tabs={[
+                { key: 'pending', icon: 'clock', label: 'En attente', count: pendingClubs.length },
+                { key: 'validated', icon: 'check', label: 'Validés', count: validatedClubs.length },
+                { key: 'suspended', icon: 'pause', label: 'Suspendus', count: suspendedClubs.length },
+              ]}
+            />
 
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
+              <div className="ec-state" role="status">Chargement...</div>
             ) : clubsTab === 'pending' ? (
               pendingClubs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun club en attente de validation</div>
+                <div className="ec-state">Aucun club en attente de validation</div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {pendingClubs.map((club) => (
-                    <div key={club.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '32px', flexShrink: 0 }}>{club.emoji || '🏛️'}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{club.nom}</div>
-                          <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.description}</div>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{club.categorie}</span>
-                            {club.createur && (
-                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {club.createur.name} ({club.createur.email})</span>
-                            )}
-                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>{new Date(club.created_at).toLocaleDateString('fr-FR')}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                        <button
-                          onClick={() => handleApproveClub(club.id)}
-                          style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          ✓ Approuver
-                        </button>
-                        <button
-                          onClick={() => handleRejectClub(club.id)}
-                          style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          ✕ Rejeter
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClub(club.id, club.nom)}
-                          style={{ background: '#1A1A2E', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.75'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          🗑 Supprimer
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <ClubsTable
+                  clubs={pendingClubs}
+                  variant="pending"
+                  onApprove={handleApproveClub}
+                  onReject={handleRejectClub}
+                  onDelete={handleDeleteClub}
+                />
               )
             ) : clubsTab === 'validated' ? (
               validatedClubs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun club validé</div>
+                <div className="ec-state">Aucun club validé</div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {validatedClubs.map((club) => (
-                    <div key={club.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '32px', flexShrink: 0 }}>{club.emoji || '🏛️'}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{club.nom}</div>
-                          <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.description}</div>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{club.categorie}</span>
-                            <span style={{ background: 'rgba(46,204,113,0.12)', color: '#1a7a47', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>✅ Validé</span>
-                            {club.createur && (
-                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {club.createur.name} ({club.createur.email})</span>
-                            )}
-                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>{new Date(club.created_at).toLocaleDateString('fr-FR')}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                        <button
-                          onClick={() => handleSuspendClub(club.id)}
-                          style={{ background: '#FF9500', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          ⏸ Suspendre
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClub(club.id, club.nom)}
-                          style={{ background: '#1A1A2E', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.75'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          🗑 Supprimer
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <ClubsTable
+                  clubs={validatedClubs}
+                  variant="validated"
+                  onSuspend={handleSuspendClub}
+                  onDelete={handleDeleteClub}
+                />
               )
             ) : (
               suspendedClubs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun club suspendu</div>
+                <div className="ec-state">Aucun club suspendu</div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {suspendedClubs.map((club) => (
-                    <div key={club.id} style={{ background: 'white', border: '1.5px solid #FFE0B2', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '32px', flexShrink: 0, opacity: 0.6 }}>{club.emoji || '🏛️'}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{club.nom}</div>
-                          <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.description}</div>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{club.categorie}</span>
-                            <span style={{ background: 'rgba(255,149,0,0.12)', color: '#b36a00', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>⏸ Suspendu</span>
-                            {club.createur && (
-                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {club.createur.name} ({club.createur.email})</span>
-                            )}
-                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>{new Date(club.created_at).toLocaleDateString('fr-FR')}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                        <button
-                          onClick={() => handleReactivateClub(club.id)}
-                          style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          ▶ Réactiver
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClub(club.id, club.nom)}
-                          style={{ background: '#1A1A2E', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.75'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          🗑 Supprimer
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <ClubsTable
+                  clubs={suspendedClubs}
+                  variant="suspended"
+                  onReactivate={handleReactivateClub}
+                  onDelete={handleDeleteClub}
+                />
               )
             )}
           </div>
@@ -688,453 +498,287 @@ const handleRejectUser = async (userId) => {
         {/* Events Validation Section */}
         {activeSection === 'events' && (
           <div>
-            {eventMsg && (
-              <div style={{
-                marginBottom: '16px',
-                padding: '10px 16px',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: 500,
-                background: eventMsg.type === 'success' ? 'rgba(46,204,113,0.12)' : eventMsg.type === 'warning' ? 'rgba(255,149,0,0.12)' : 'rgba(233,69,96,0.10)',
-                color: eventMsg.type === 'success' ? '#1a7a47' : eventMsg.type === 'warning' ? '#b36a00' : '#E94560',
-              }}>
-                {eventMsg.text}
-              </div>
-            )}
+            <Notice msg={eventMsg} />
 
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '4px', width: 'fit-content' }}>
-              <button
-                onClick={() => setEventsTab('pending')}
-                style={{ background: eventsTab === 'pending' ? '#1A1A2E' : 'transparent', color: eventsTab === 'pending' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-              >
-                ⏳ En attente {(pendingEvents.length > 0 ? pendingEvents : allEvents.filter(isPendingStatus)).length > 0 && `(${(pendingEvents.length > 0 ? pendingEvents : allEvents.filter(isPendingStatus)).length})`}
-              </button>
-              <button
-                onClick={() => setEventsTab('all')}
-                style={{ background: eventsTab === 'all' ? '#1A1A2E' : 'transparent', color: eventsTab === 'all' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-              >
-                📋 Tous {allEvents.length > 0 && `(${allEvents.length})`}
-              </button>
-            </div>
+            <Tabs
+              label="Filtrer les événements"
+              value={eventsTab}
+              onChange={setEventsTab}
+              tabs={[
+                { key: 'pending', icon: 'clock', label: 'En attente', count: pendingEventList.length },
+                { key: 'all', icon: 'list', label: 'Tous', count: allEvents.length },
+              ]}
+            />
 
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
+              <div className="ec-state" role="status">Chargement...</div>
             ) : eventsTab === 'pending' ? (
-              (() => {
-                const pendingList = pendingEvents.length > 0 ? pendingEvents : allEvents.filter(isPendingStatus)
-                if (pendingList.length === 0) {
-                  return <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun événement en attente de validation</div>
-                }
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {pendingList.map((event) => (
-                      <div key={event.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '32px', flexShrink: 0 }}>{event.club?.emoji || '📅'}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{event.titre}</div>
-                            <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.description}</div>
-                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                              <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{event.categorie}</span>
-                              <span style={{ background: 'rgba(255,149,0,0.12)', color: '#b36a00', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>⏳ En attente</span>
-                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📅 {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}{event.heure ? ` · ${event.heure.substring(0, 5)}` : ''}</span>
-                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📍 {event.lieu || '—'}</span>
-                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>👥 {event.capacite_max} places</span>
-                              {event.club && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>🏛️ {event.club.nom}</span>}
-                              {event.club?.createur && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {event.club.createur.name}</span>}
-                            </div>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                          <button onClick={() => handleValidateEvent(event.id)} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✓ Valider</button>
-                          <button onClick={() => handleRejectEvent(event.id)} style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✕ Refuser</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              })()
+              pendingEventList.length === 0 ? (
+                <div className="ec-state">Aucun événement en attente de validation</div>
+              ) : (
+                <EventsTable
+                  events={pendingEventList}
+                  alwaysPending
+                  isPendingStatus={isPendingStatus}
+                  onValidate={handleValidateEvent}
+                  onReject={handleRejectEvent}
+                />
+              )
             ) : allEvents.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun événement</div>
+              <div className="ec-state">Aucun événement</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {allEvents.map((event) => {
-                  const isPending = isPendingStatus(event.statut)
-                  const sl = event.statut?.toString().toLowerCase().trim()
-                  const sc = {
-                    'validé': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Validé' },
-                    'valide': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Validé' },
-                    'accepté': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Accepté' },
-                    'accepte': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Accepté' },
-                    'en attente': { bg: 'rgba(255,149,0,0.12)', color: '#b36a00', label: '⏳ En attente' },
-                    'pending': { bg: 'rgba(255,149,0,0.12)', color: '#b36a00', label: '⏳ En attente' },
-                    'rejeté': { bg: 'rgba(233,69,96,0.10)', color: '#E94560', label: '❌ Rejeté' },
-                    'rejete': { bg: 'rgba(233,69,96,0.10)', color: '#E94560', label: '❌ Rejeté' },
-                  }[sl] || { bg: 'rgba(255,149,0,0.12)', color: '#b36a00', label: '⏳ En attente' }
-                  return (
-                    <div key={event.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '32px', flexShrink: 0 }}>{event.club?.emoji || '📅'}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{event.titre}</div>
-                          <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.description}</div>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{event.categorie}</span>
-                            <span style={{ background: sc.bg, color: sc.color, padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{sc.label}</span>
-                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📅 {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}{event.heure ? ` · ${event.heure.substring(0, 5)}` : ''}</span>
-                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📍 {event.lieu || '—'}</span>
-                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>👥 {event.capacite_max} places</span>
-                            {event.club && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>🏛️ {event.club.nom}</span>}
-                            {event.club?.createur && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {event.club.createur.name}</span>}
-                          </div>
-                        </div>
-                      </div>
-                      {isPending && (
-                        <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                          <button onClick={() => handleValidateEvent(event.id)} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✓ Valider</button>
-                          <button onClick={() => handleRejectEvent(event.id)} style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✕ Refuser</button>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Clubs Validation Section */}
-        {activeSection === 'clubs' && (
-          <div>
-            {clubMsg && (
-              <div style={{
-                marginBottom: '16px',
-                padding: '10px 16px',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: 500,
-                background: clubMsg.type === 'success' ? 'rgba(46,204,113,0.12)' : clubMsg.type === 'warning' ? 'rgba(255,149,0,0.12)' : 'rgba(233,69,96,0.10)',
-                color: clubMsg.type === 'success' ? '#1a7a47' : clubMsg.type === 'warning' ? '#b36a00' : '#E94560',
-              }}>
-                {clubMsg.text}
-              </div>
-            )}
-
-            {/* Tabs */}
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '4px', width: 'fit-content' }}>
-              <button
-                onClick={() => setClubsTab('pending')}
-                style={{ background: clubsTab === 'pending' ? '#1A1A2E' : 'transparent', color: clubsTab === 'pending' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-              >
-                ⏳ En attente {pendingClubs.length > 0 && `(${pendingClubs.length})`}
-              </button>
-              <button
-                onClick={() => setClubsTab('validated')}
-                style={{ background: clubsTab === 'validated' ? '#1A1A2E' : 'transparent', color: clubsTab === 'validated' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-              >
-                ✅ Validés {validatedClubs.length > 0 && `(${validatedClubs.length})`}
-              </button>
-              <button
-                onClick={() => setClubsTab('suspended')}
-                style={{ background: clubsTab === 'suspended' ? '#1A1A2E' : 'transparent', color: clubsTab === 'suspended' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-              >
-                ⏸ Suspendus {suspendedClubs.length > 0 && `(${suspendedClubs.length})`}
-              </button>
-            </div>
-
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
-            ) : clubsTab === 'pending' ? (
-              pendingClubs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun club en attente de validation</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {pendingClubs.map((club) => (
-                    <div key={club.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '32px', flexShrink: 0 }}>{club.emoji || '🏛️'}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{club.nom}</div>
-                          <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.description}</div>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{club.categorie}</span>
-                            {club.createur && (
-                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {club.createur.name} ({club.createur.email})</span>
-                            )}
-                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>{new Date(club.created_at).toLocaleDateString('fr-FR')}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                        <button
-                          onClick={() => handleApproveClub(club.id)}
-                          style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          ✓ Approuver
-                        </button>
-                        <button
-                          onClick={() => handleRejectClub(club.id)}
-                          style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          ✕ Rejeter
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClub(club.id, club.nom)}
-                          style={{ background: '#1A1A2E', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.75'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          🗑 Supprimer
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )
-            ) : clubsTab === 'validated' ? (
-              validatedClubs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun club validé</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {validatedClubs.map((club) => (
-                    <div key={club.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '32px', flexShrink: 0 }}>{club.emoji || '🏛️'}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{club.nom}</div>
-                          <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.description}</div>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{club.categorie}</span>
-                            <span style={{ background: 'rgba(46,204,113,0.12)', color: '#1a7a47', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>✅ Validé</span>
-                            {club.createur && (
-                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {club.createur.name} ({club.createur.email})</span>
-                            )}
-                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>{new Date(club.created_at).toLocaleDateString('fr-FR')}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                        <button
-                          onClick={() => handleSuspendClub(club.id)}
-                          style={{ background: '#FF9500', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          ⏸ Suspendre
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClub(club.id, club.nom)}
-                          style={{ background: '#1A1A2E', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.75'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          🗑 Supprimer
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )
-            ) : (
-              suspendedClubs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun club suspendu</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {suspendedClubs.map((club) => (
-                    <div key={club.id} style={{ background: 'white', border: '1.5px solid #FFE0B2', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '32px', flexShrink: 0, opacity: 0.6 }}>{club.emoji || '🏛️'}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{club.nom}</div>
-                          <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.description}</div>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{club.categorie}</span>
-                            <span style={{ background: 'rgba(255,149,0,0.12)', color: '#b36a00', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>⏸ Suspendu</span>
-                            {club.createur && (
-                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {club.createur.name} ({club.createur.email})</span>
-                            )}
-                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>{new Date(club.created_at).toLocaleDateString('fr-FR')}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                        <button
-                          onClick={() => handleReactivateClub(club.id)}
-                          style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          ▶ Réactiver
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClub(club.id, club.nom)}
-                          style={{ background: '#1A1A2E', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
-                          onMouseEnter={(e) => e.target.style.opacity = '0.75'}
-                          onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                          🗑 Supprimer
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )
-            )}
-          </div>
-        )}
-
-        {/* Events Validation Section */}
-        {activeSection === 'events' && (
-          <div>
-            {eventMsg && (
-              <div style={{
-                marginBottom: '16px',
-                padding: '10px 16px',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: 500,
-                background: eventMsg.type === 'success' ? 'rgba(46,204,113,0.12)' : eventMsg.type === 'warning' ? 'rgba(255,149,0,0.12)' : 'rgba(233,69,96,0.10)',
-                color: eventMsg.type === 'success' ? '#1a7a47' : eventMsg.type === 'warning' ? '#b36a00' : '#E94560',
-              }}>
-                {eventMsg.text}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '4px', width: 'fit-content' }}>
-              <button
-                onClick={() => setEventsTab('pending')}
-                style={{ background: eventsTab === 'pending' ? '#1A1A2E' : 'transparent', color: eventsTab === 'pending' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-              >
-                ⏳ En attente {(pendingEvents.length > 0 ? pendingEvents : allEvents.filter(isPendingStatus)).length > 0 && `(${(pendingEvents.length > 0 ? pendingEvents : allEvents.filter(isPendingStatus)).length})`}
-              </button>
-              <button
-                onClick={() => setEventsTab('all')}
-                style={{ background: eventsTab === 'all' ? '#1A1A2E' : 'transparent', color: eventsTab === 'all' ? 'white' : '#7A7A8C', border: 'none', borderRadius: '7px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-              >
-                📋 Tous {allEvents.length > 0 && `(${allEvents.length})`}
-              </button>
-            </div>
-
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Chargement...</div>
-            ) : eventsTab === 'pending' ? (
-              (() => {
-                const pendingList = pendingEvents.length > 0 ? pendingEvents : allEvents.filter(isPendingStatus)
-                if (pendingList.length === 0) {
-                  return <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun événement en attente de validation</div>
-                }
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {pendingList.map((event) => (
-                      <div key={event.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '32px', flexShrink: 0 }}>{event.club?.emoji || '📅'}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{event.titre}</div>
-                            <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.description}</div>
-                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                              <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{event.categorie}</span>
-                              <span style={{ background: 'rgba(255,149,0,0.12)', color: '#b36a00', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>⏳ En attente</span>
-                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📅 {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}{event.heure ? ` · ${event.heure.substring(0, 5)}` : ''}</span>
-                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📍 {event.lieu || '—'}</span>
-                              <span style={{ fontSize: '11px', color: '#7A7A8C' }}>👥 {event.capacite_max} places</span>
-                              {event.club && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>🏛️ {event.club.nom}</span>}
-                              {event.club?.createur && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {event.club.createur.name}</span>}
-                            </div>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                          <button onClick={() => handleValidateEvent(event.id)} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✓ Valider</button>
-                          <button onClick={() => handleRejectEvent(event.id)} style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✕ Refuser</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              })()
-            ) : allEvents.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#7A7A8C', fontSize: '14px' }}>Aucun événement</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {allEvents.map((event) => {
-                  const isPending = isPendingStatus(event.statut)
-                  const sl = event.statut?.toString().toLowerCase().trim()
-                  const sc = {
-                    'validé': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Validé' },
-                    'valide': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Validé' },
-                    'accepté': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Accepté' },
-                    'accepte': { bg: 'rgba(46,204,113,0.12)', color: '#1a7a47', label: '✅ Accepté' },
-                    'en attente': { bg: 'rgba(255,149,0,0.12)', color: '#b36a00', label: '⏳ En attente' },
-                    'pending': { bg: 'rgba(255,149,0,0.12)', color: '#b36a00', label: '⏳ En attente' },
-                    'rejeté': { bg: 'rgba(233,69,96,0.10)', color: '#E94560', label: '❌ Rejeté' },
-                    'rejete': { bg: 'rgba(233,69,96,0.10)', color: '#E94560', label: '❌ Rejeté' },
-                  }[sl] || { bg: 'rgba(255,149,0,0.12)', color: '#b36a00', label: '⏳ En attente' }
-                  return (
-                    <div key={event.id} style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '32px', flexShrink: 0 }}>{event.club?.emoji || '📅'}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, color: '#1A1A2E', fontSize: '15px', marginBottom: '2px' }}>{event.titre}</div>
-                          <div style={{ fontSize: '12px', color: '#7A7A8C', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.description}</div>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span style={{ background: '#EEF0FF', color: '#4A4AE8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{event.categorie}</span>
-                            <span style={{ background: sc.bg, color: sc.color, padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{sc.label}</span>
-                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📅 {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}{event.heure ? ` · ${event.heure.substring(0, 5)}` : ''}</span>
-                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>📍 {event.lieu || '—'}</span>
-                            <span style={{ fontSize: '11px', color: '#7A7A8C' }}>👥 {event.capacite_max} places</span>
-                            {event.club && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>🏛️ {event.club.nom}</span>}
-                            {event.club?.createur && <span style={{ fontSize: '11px', color: '#7A7A8C' }}>par {event.club.createur.name}</span>}
-                          </div>
-                        </div>
-                      </div>
-                      {isPending && (
-                        <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                          <button onClick={() => handleValidateEvent(event.id)} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✓ Valider</button>
-                          <button onClick={() => handleRejectEvent(event.id)} style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✕ Refuser</button>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+              <EventsTable
+                events={allEvents}
+                isPendingStatus={isPendingStatus}
+                onValidate={handleValidateEvent}
+                onReject={handleRejectEvent}
+              />
             )}
           </div>
         )}
 
         {/* Activity Section */}
         {activeSection === 'activity' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-              <div style={{ fontSize: '24px', flexShrink: 0 }}>📝</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, color: '#1A1A2E', fontSize: '14px', marginBottom: '4px' }}>Nouvel événement créé</div>
-                <div style={{ color: '#7A7A8C', fontSize: '12px' }}>Hackathon 2026 - créé par TechClub</div>
-              </div>
-              <div style={{ fontSize: '11px', color: '#7A7A8C', flexShrink: 0 }}>Il y a 2h</div>
-            </div>
-            <div style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-              <div style={{ fontSize: '24px', flexShrink: 0 }}>👤</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, color: '#1A1A2E', fontSize: '14px', marginBottom: '4px' }}>Nouvel utilisateur inscrit</div>
-                <div style={{ color: '#7A7A8C', fontSize: '12px' }}>Sophie Leclerc - Organisateur</div>
-              </div>
-              <div style={{ fontSize: '11px', color: '#7A7A8C', flexShrink: 0 }}>Il y a 4h</div>
-            </div>
-            <div style={{ background: 'white', border: '1.5px solid #E0E0E6', borderRadius: '10px', padding: '16px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-              <div style={{ fontSize: '24px', flexShrink: 0 }}>🏫</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, color: '#1A1A2E', fontSize: '14px', marginBottom: '4px' }}>Nouveau club créé</div>
-                <div style={{ color: '#7A7A8C', fontSize: '12px' }}>PhotoClub - 25 membres</div>
-              </div>
-              <div style={{ fontSize: '11px', color: '#7A7A8C', flexShrink: 0 }}>Il y a 1j</div>
-            </div>
-          </div>
+          <ul className="adm__activity">
+            {ACTIVITY.map((a) => (
+              <li key={a.title} className="ec-card adm__activity-item">
+                <span className="adm__activity-ico"><AdminIcon name={a.icon} size={20} /></span>
+                <div className="adm__activity-body">
+                  <div className="adm__activity-title">{a.title}</div>
+                  <div className="adm__activity-sub">{a.sub}</div>
+                </div>
+                <div className="adm__activity-time">{a.time}</div>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
+    </DashboardLayout>
+  )
+}
+
+const ROLE_BADGES = {
+  etudiant: { cls: 'ec-badge--green', icon: 'student', label: 'Étudiant' },
+  organisateur: { cls: 'ec-badge--sand', icon: 'club', label: 'Organisateur' },
+  banni: { cls: 'ec-badge--red', icon: 'ban', label: 'Banni' },
+  admin: { cls: 'ec-badge--gray', icon: 'shield', label: 'Admin' },
+}
+
+const EVENT_STATUS = {
+  green: { cls: 'ec-badge--green', icon: 'check' },
+  amber: { cls: 'ec-badge--amber', icon: 'clock' },
+  red: { cls: 'ec-badge--red', icon: 'x' },
+}
+
+const EVENT_STATUS_MAP = {
+  'validé': { tone: 'green', label: 'Validé' },
+  'valide': { tone: 'green', label: 'Validé' },
+  'accepté': { tone: 'green', label: 'Accepté' },
+  'accepte': { tone: 'green', label: 'Accepté' },
+  'en attente': { tone: 'amber', label: 'En attente' },
+  'pending': { tone: 'amber', label: 'En attente' },
+  'rejeté': { tone: 'red', label: 'Rejeté' },
+  'rejete': { tone: 'red', label: 'Rejeté' },
+}
+
+const ACTIVITY = [
+  { icon: 'edit', title: 'Nouvel événement créé', sub: 'Hackathon 2026 - créé par TechClub', time: 'Il y a 2h' },
+  { icon: 'user', title: 'Nouvel utilisateur inscrit', sub: 'Sophie Leclerc - Organisateur', time: 'Il y a 4h' },
+  { icon: 'club', title: 'Nouveau club créé', sub: 'PhotoClub - 25 membres', time: 'Il y a 1j' },
+]
+
+function Notice({ msg }) {
+  if (!msg) return null
+  const cls = msg.type === 'success' ? 'ec-alert--success' : msg.type === 'warning' ? 'adm__alert--warning' : 'ec-alert--error'
+  const icon = msg.type === 'success' ? 'check' : msg.type === 'warning' ? 'pause' : 'x'
+  return (
+    <div role="status" className={`ec-alert adm__alert ${cls}`}>
+      <AdminIcon name={icon} />
+      <span>{msg.text}</span>
+    </div>
+  )
+}
+
+function Tabs({ label, tabs, value, onChange }) {
+  return (
+    <div className="adm__tabs" role="group" aria-label={label}>
+      {tabs.map((t) => (
+        <button
+          key={t.key}
+          type="button"
+          className={`ec-chip adm__tab${value === t.key ? ' is-active' : ''}`}
+          aria-pressed={value === t.key}
+          onClick={() => onChange(t.key)}
+        >
+          <AdminIcon name={t.icon} size={14} />
+          {t.label}{t.count > 0 && ` (${t.count})`}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function ClubsTable({ clubs, variant, onApprove, onReject, onSuspend, onReactivate, onDelete }) {
+  const status = {
+    pending: { cls: 'ec-badge--amber', icon: 'clock', label: 'En attente' },
+    validated: { cls: 'ec-badge--green', icon: 'check', label: 'Validé' },
+    suspended: { cls: 'ec-badge--amber', icon: 'pause', label: 'Suspendu' },
+  }[variant]
+  return (
+    <div className="ec-table-wrap">
+      <table className="ec-table adm__table adm__table--wide">
+        <thead>
+          <tr>
+            {['Club', 'Catégorie', 'Créé par', 'Date', 'Statut', 'Actions'].map(h => (
+              <th key={h} scope="col">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {clubs.map((club) => (
+            <tr key={club.id}>
+              <td>
+                <div className="adm__ent">
+                  <span className={`adm__ent-ico${variant === 'suspended' ? ' is-dim' : ''}`} aria-hidden="true">
+                    {club.emoji || <AdminIcon name="club" size={20} />}
+                  </span>
+                  <div className="adm__ent-body">
+                    <div className="adm__cell-title">{club.nom}</div>
+                    <div className="adm__cell-sub adm__clamp">{club.description}</div>
+                  </div>
+                </div>
+              </td>
+              <td><span className="ec-badge ec-badge--sand">{club.categorie}</span></td>
+              <td>
+                {club.createur ? (
+                  <>
+                    <div>{club.createur.name}</div>
+                    <div className="adm__cell-sub">{club.createur.email}</div>
+                  </>
+                ) : '—'}
+              </td>
+              <td className="adm__nowrap">{new Date(club.created_at).toLocaleDateString('fr-FR')}</td>
+              <td>
+                <span className={`ec-badge ${status.cls}`}>
+                  <AdminIcon name={status.icon} size={12} />
+                  {status.label}
+                </span>
+              </td>
+              <td>
+                <div className="adm__actions">
+                  {variant === 'pending' && (
+                    <>
+                      <button type="button" className="ec-btn ec-btn--primary ec-btn--sm" onClick={() => onApprove(club.id)}>
+                        <AdminIcon name="check" />
+                        Approuver
+                      </button>
+                      <button type="button" className="ec-btn ec-btn--danger ec-btn--sm" onClick={() => onReject(club.id)}>
+                        <AdminIcon name="x" />
+                        Rejeter
+                      </button>
+                    </>
+                  )}
+                  {variant === 'validated' && (
+                    <button type="button" className="ec-btn ec-btn--danger ec-btn--sm" onClick={() => onSuspend(club.id)}>
+                      <AdminIcon name="pause" />
+                      Suspendre
+                    </button>
+                  )}
+                  {variant === 'suspended' && (
+                    <button type="button" className="ec-btn ec-btn--primary ec-btn--sm" onClick={() => onReactivate(club.id)}>
+                      <AdminIcon name="play" />
+                      Réactiver
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="ec-btn ec-btn--danger ec-btn--sm"
+                    aria-label={`Supprimer le club ${club.nom}`}
+                    onClick={() => onDelete(club.id, club.nom)}
+                  >
+                    <AdminIcon name="trash" />
+                    Supprimer
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function EventsTable({ events, alwaysPending, isPendingStatus, onValidate, onReject }) {
+  return (
+    <div className="ec-table-wrap">
+      <table className="ec-table adm__table adm__table--wide">
+        <thead>
+          <tr>
+            {['Événement', 'Club', 'Date', 'Lieu', 'Places', 'Statut', 'Actions'].map(h => (
+              <th key={h} scope="col">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {events.map((event) => {
+            const isPending = alwaysPending || isPendingStatus(event.statut)
+            const sl = event.statut?.toString().toLowerCase().trim()
+            const st = alwaysPending
+              ? EVENT_STATUS_MAP['en attente']
+              : (EVENT_STATUS_MAP[sl] || EVENT_STATUS_MAP['en attente'])
+            const tone = EVENT_STATUS[st.tone]
+            return (
+              <tr key={event.id}>
+                <td>
+                  <div className="adm__ent">
+                    <span className="adm__ent-ico" aria-hidden="true">
+                      {event.club?.emoji || <AdminIcon name="calendar" size={20} />}
+                    </span>
+                    <div className="adm__ent-body">
+                      <div className="adm__cell-title">{event.titre}</div>
+                      <div className="adm__cell-sub adm__clamp">{event.description}</div>
+                      {event.categorie && (
+                        <div className="adm__badges"><span className="ec-badge ec-badge--sand">{event.categorie}</span></div>
+                      )}
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  {event.club ? <div>{event.club.nom}</div> : '—'}
+                  {event.club?.createur && <div className="adm__cell-sub">par {event.club.createur.name}</div>}
+                </td>
+                <td className="adm__nowrap">
+                  <div>{new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                  {event.heure && <div className="adm__cell-sub">{event.heure.substring(0, 5)}</div>}
+                </td>
+                <td>{event.lieu || '—'}</td>
+                <td className="adm__nowrap">{event.capacite_max} places</td>
+                <td>
+                  <span className={`ec-badge ${tone.cls}`}>
+                    <AdminIcon name={tone.icon} size={12} />
+                    {st.label}
+                  </span>
+                </td>
+                <td>
+                  {isPending && (
+                    <div className="adm__actions">
+                      <button type="button" className="ec-btn ec-btn--primary ec-btn--sm" onClick={() => onValidate(event.id)}>
+                        <AdminIcon name="check" />
+                        Valider
+                      </button>
+                      <button type="button" className="ec-btn ec-btn--danger ec-btn--sm" onClick={() => onReject(event.id)}>
+                        <AdminIcon name="x" />
+                        Refuser
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }

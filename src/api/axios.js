@@ -1,7 +1,15 @@
 import axios from 'axios'
 
+const apiBaseUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : null)
+
+if (!apiBaseUrl) {
+  throw new Error('Set VITE_API_URL to the deployed backend URL ending in /api.')
+}
+
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
+  // In development Vite proxies same-origin '/api' requests to Laravel.
+  // In production set VITE_API_URL to the deployed API URL, including /api.
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
